@@ -1,10 +1,16 @@
 package hrm
 
-import java.util.*
-
+/**
+ * An implementation of the HRM architecture, as best I can figure it out.
+ */
 class Machine(
-  private val program: List<Instruction>
+  private val program: List<Instruction>,
+  private val presets: Map<Int, Value> = emptyMap()
 ) {
+  companion object {
+    const val MAX_STEPS = 10000
+  }
+
   init {
     val labels = program.filterIsInstance<Label>()
     val numbers = labels.map { it.n }.toSet()
@@ -13,58 +19,94 @@ class Machine(
     }
   }
 
-  fun execute(inbox: Queue<Any>): List<Any> {
-    val outbox = mutableListOf<Any>()
+  fun execute(inboxIterable: Iterable<Value>): List<Value> {
+    val inbox = inboxIterable.iterator()
+    val outbox = mutableListOf<Value>()
 
-    val memory = arrayOfNulls<Any?>(100)
+    // The amount of available memory can vary; this is more lenient than the game.
+    val memory = arrayOfNulls<Value?>(100)
+    presets.forEach { (index, value) -> memory[index] = value }
 
+    var counter = 0
     var ip = 0
-    var register: Any? = null
+    var register: Value? = null
 
     loop@ while (true) {
+      // The game doesn't seem to have this, but might as well
+      if (counter++ > MAX_STEPS) {
+        error("Exceeded $MAX_STEPS steps. Infinite loop?")
+      }
+
       val instr = program[ip]
       var jumped = false
 
       when (instr) {
-        is Inbox -> if (inbox.isEmpty()) {
-          break@loop
+        is Inbox -> if (inbox.hasNext()) {
+          register = inbox.next()
         } else {
-          register = inbox.poll()
+          break@loop
         }
 
         is Outbox -> register?.let { outbox.add(it) } ?: error("Tried to outbox nothing")
 
-        is CopyFrom -> register = instr.source.read(memory) ?: error("Tried to read nothing")
+        is CopyFrom -> register = read(memory, instr.source) ?: error("Tried to read empty cell")
 
-        is CopyTo -> instr.dest.write(memory, register)
+        is CopyTo -> register?.let { write(memory, instr.dest, it) }
+          ?: error("Tried to write empty register")
 
         is Add -> {
-          val a = register as? Int ?: error("Cannot add non-int $register")
-          val b = instr.addend.read(memory) as? Int ?: error("Cannot add non-int ${instr.addend}")
+          val a = register ?: error("Tried to add to empty register")
+          val b = read(memory, instr.addend) ?: error("Cannot add empty ${instr.addend}")
           register = a + b
         }
 
         is Sub -> {
-          val a = register as? Int ?: error("Cannot subtract non-int $register")
-          val b = instr.subtrahend.read(memory) as? Int ?: error("Cannot subtract non-int ${instr.subtrahend}")
+          val a = register
+            ?: error("Tried to subtract from empty register")
+          val b = read(memory, instr.subtrahend)
+            ?: error("Cannot subtract empty ${instr.subtrahend}")
           register = a - b
         }
 
-        is Label -> {}
+        is BumpUp -> {
+          val original = read(memory, instr.operand)
+            ?: error("Cannot bump empty ${instr.operand}")
+          val bumped = original + IntValue(1)
+          write(memory, instr.operand, bumped)
+          register = bumped
+        }
+
+        is BumpDown -> {
+          val original = read(memory, instr.operand)
+            ?: error("Cannot bump empty ${instr.operand}")
+          val bumped = original - IntValue(1)
+          write(memory, instr.operand, bumped)
+          register = bumped
+        }
+
+        is Label -> Unit
 
         is Jump -> {
-          ip = indexOf(instr.dest)
+          ip = indexOf(instr.labelN)
           jumped = true
         }
 
-        is JumpIfZero -> if (register == 0) {
-          ip = indexOf(instr.dest)
-          jumped = true
+        // It's valid to conditional-jump with a letter value in register.
+        // The condition is never true in that case.
+        is JumpIfZero -> {
+          val regNow = register ?: error("Can't conditional-jump with empty register")
+          if (regNow is IntValue && regNow.n == 0) {
+            ip = indexOf(instr.labelN)
+            jumped = true
+          }
         }
 
-        is JumpIfNegative -> if (register < 0) {
-          ip = indexOf(instr.dest)
-          jumped = true
+        is JumpIfNegative -> {
+          val regNow = register ?: error("Can't conditional-jump with empty register")
+          if (regNow is IntValue && regNow.n < 0) {
+            ip = indexOf(instr.labelN)
+            jumped = true
+          }
         }
       }
 
@@ -79,15 +121,37 @@ class Machine(
     return outbox
   }
 
-  private fun indexOf(label: Label): Int {
-    val index = program.indexOf(label)
+  private fun read(memory: Array<Value?>, address: MemRef): Value? {
+    return when (address) {
+      is Constant -> memory[address.index]
+      is Dereference -> {
+        val addressInMemory = memory[address.index] as? IntValue
+          ?: error("Cannot dereference empty or non-int cell $address")
+        memory[addressInMemory.n]
+      }
+    }
+  }
+
+  private fun write(memory: Array<Value?>, address: MemRef, value: Value) {
+    when (address) {
+      is Constant -> memory[address.index] = value
+      is Dereference -> {
+        val addressInMemory = memory[address.index] as? IntValue
+          ?: error("Cannot dereference empty or non-int cell $address")
+        memory[addressInMemory.n] = value
+      }
+    }
+  }
+
+  private fun indexOf(labelN: Int): Int {
+    val index = program.indexOf(Label(labelN))
     if (index < 0) {
-      throw RuntimeException("Unknown label $label")
+      throw RuntimeException("Unknown label $labelN")
     }
     return index
   }
 
   private fun error(message: String): Nothing {
-    throw RuntimeException(message)
+    throw MachineException(message)
   }
 }

@@ -1,25 +1,12 @@
 package hrm
 
 
-sealed class MemRef {
-  abstract fun read(memory: Array<Any?>): Any?
-  abstract fun write(memory: Array<Any?>, value: Any?)
-}
+sealed class MemRef
 
 data class Constant(
   val index: Int
-) : MemRef() {
-  override fun read(memory: Array<Any?>) = memory[index]
-  override fun write(memory: Array<Any?>, value: Any?) {
-    memory[index] = value
-  }
-}
+) : MemRef()
 
 data class Dereference(
   val index: Int
-) : MemRef() {
-  override fun read(memory: Array<Any?>) = memory[memory[index] as Int]
-  override fun write(memory: Array<Any?>, value: Any?) {
-    memory[memory[index] as Int] = value
-  }
-}
+) : MemRef()
