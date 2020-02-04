@@ -47,7 +47,10 @@ class Machine(
           break@loop
         }
 
-        is Outbox -> register?.let { outbox.add(it) } ?: error("Tried to outbox nothing")
+        is Outbox -> {
+          register?.let { outbox.add(it) } ?: error("Tried to outbox nothing")
+          register = null
+        }
 
         is CopyFrom -> register = read(memory, instr.source) ?: error("Tried to read empty cell")
 
