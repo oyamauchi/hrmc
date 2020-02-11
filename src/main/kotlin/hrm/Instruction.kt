@@ -44,14 +44,18 @@ data class Label(
   val n: Int = 0
 ) : Instruction()
 
-data class Jump(
+interface HasTargetLabel {
   val labelN: Int
-) : Instruction()
+}
+
+data class Jump(
+  override val labelN: Int
+) : Instruction(), HasTargetLabel
 
 data class JumpIfZero(
-  val labelN: Int
-) : Instruction()
+  override val labelN: Int
+) : Instruction(), HasTargetLabel
 
 data class JumpIfNegative(
-  val labelN: Int
-) : Instruction()
+  override val labelN: Int
+) : Instruction(), HasTargetLabel

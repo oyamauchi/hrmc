@@ -14,8 +14,14 @@ class Machine(
   init {
     val labels = program.filterIsInstance<Label>()
     val numbers = labels.map { it.n }.toSet()
+
     if (labels.size != numbers.size) {
       throw RuntimeException("All labels must have different numbers")
+    }
+
+    val targetedNumbers = program.filterIsInstance<HasTargetLabel>().map { it.labelN }
+    if (!numbers.containsAll(targetedNumbers)) {
+      throw RuntimeException("All jumps must be to labels that exist")
     }
   }
 
@@ -31,7 +37,7 @@ class Machine(
     var ip = 0
     var register: Value? = null
 
-    loop@ while (true) {
+    while (true) {
       // The game doesn't seem to have this, but might as well
       if (counter++ > MAX_STEPS) {
         error("Exceeded $MAX_STEPS steps. Infinite loop?")
@@ -44,7 +50,7 @@ class Machine(
         is Inbox -> if (inbox.hasNext()) {
           register = inbox.next()
         } else {
-          break@loop
+          return outbox
         }
 
         is Outbox -> {
@@ -101,7 +107,7 @@ class Machine(
           if (regNow is IntValue && regNow.n == 0) {
             ip = indexOf(instr.labelN)
             jumped = true
-          }
+          } else Unit
         }
 
         is JumpIfNegative -> {
@@ -109,19 +115,17 @@ class Machine(
           if (regNow is IntValue && regNow.n < 0) {
             ip = indexOf(instr.labelN)
             jumped = true
-          }
+          } else Unit
         }
-      }
+      }.let {}  // Force compilation error if when not exhaustive
 
       if (!jumped) {
         ip++
         if (ip > program.size) {
-          break@loop
+          return outbox
         }
       }
     }
-
-    return outbox
   }
 
   private fun read(memory: Array<Value?>, address: MemRef): Value? {
