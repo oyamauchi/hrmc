@@ -182,7 +182,13 @@ class Compiler(
         visit(expr.left, output, terminateLabel)
         output.add(hrm.Add(Constant(tempSlot)))
       }
-      is Subtract -> TODO()
+      is Subtract -> {
+        visit(expr.right, output, terminateLabel)
+        output.add(CopyTo(tempSlot))
+
+        visit(expr.left, output, terminateLabel)
+        output.add(Sub(Constant(tempSlot)))
+      }
 
       is Inc -> output.add(BumpUp(Constant(variableMap[expr.variable]!!)))
       is Dec -> output.add(BumpDown(Constant(variableMap[expr.variable]!!)))
