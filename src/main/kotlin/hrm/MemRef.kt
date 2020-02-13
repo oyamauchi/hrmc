@@ -5,8 +5,12 @@ sealed class MemRef
 
 data class Constant(
   val index: Int
-) : MemRef()
+) : MemRef() {
+  override fun toString() = "$index"
+}
 
 data class Dereference(
   val index: Int
-) : MemRef()
+) : MemRef() {
+  override fun toString() = "[$index]"
+}

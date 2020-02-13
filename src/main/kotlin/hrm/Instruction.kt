@@ -8,41 +8,57 @@ package hrm
  */
 sealed class Instruction
 
-object Inbox : Instruction()
+object Inbox : Instruction() {
+  override fun toString() = "-> inbox"
+}
 
-object Outbox : Instruction()
+object Outbox : Instruction() {
+  override fun toString() = "outbox ->"
+}
 
 data class CopyFrom(
   val source: MemRef
 ) : Instruction() {
   constructor(index: Int) : this(Constant(index))
+  override fun toString() = "copyfrom $source"
 }
 
 data class CopyTo(
   val dest: MemRef
 ) : Instruction() {
   constructor(index: Int) : this(Constant(index))
+  override fun toString() = "copyto $dest"
 }
 
 data class Add(
   val addend: MemRef
-) : Instruction()
+) : Instruction() {
+  override fun toString() = "add $addend"
+}
 
 data class Sub(
   val subtrahend: MemRef
-) : Instruction()
+) : Instruction() {
+  override fun toString() = "sub $subtrahend"
+}
 
 data class BumpUp(
   val operand: MemRef
-) : Instruction()
+) : Instruction() {
+  override fun toString() = "bump+ $operand"
+}
 
 data class BumpDown(
   val operand: MemRef
-) : Instruction()
+) : Instruction() {
+  override fun toString() = "bump- $operand"
+}
 
 data class Label(
   val n: Int = 0
-) : Instruction()
+) : Instruction() {
+  override fun toString() = "  $n:"
+}
 
 interface HasTargetLabel {
   val labelN: Int
@@ -50,12 +66,18 @@ interface HasTargetLabel {
 
 data class Jump(
   override val labelN: Int
-) : Instruction(), HasTargetLabel
+) : Instruction(), HasTargetLabel {
+  override fun toString() = "jump              $labelN"
+}
 
 data class JumpIfZero(
   override val labelN: Int
-) : Instruction(), HasTargetLabel
+) : Instruction(), HasTargetLabel {
+  override fun toString() = "jump if zero      $labelN"
+}
 
 data class JumpIfNegative(
   override val labelN: Int
-) : Instruction(), HasTargetLabel
+) : Instruction(), HasTargetLabel {
+  override fun toString() = "jump if negative  $labelN"
+}
