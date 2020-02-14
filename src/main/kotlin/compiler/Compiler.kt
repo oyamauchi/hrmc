@@ -48,6 +48,36 @@ class Compiler(
     return Label(labelCounter++)
   }
 
+  private fun visitBinary(
+    left: Expression,
+    right: Expression,
+    combiner: (MemRef) -> Instruction,
+    output: MutableList<Instruction>,
+    terminateLabel: Label
+  ): Boolean {
+    val rightSlot: MemRef = when (right) {
+      is ReadVar -> Constant(variableMap[right.variable]!!)
+      is ReadMem -> Dereference(variableMap[right.address]!!)
+      is AssignVar -> {
+        visit(right, output, terminateLabel)
+        Constant(variableMap[right.variable]!!)
+      }
+      is WriteMem -> {
+        visit(right, output, terminateLabel)
+        Dereference(variableMap[right.address]!!)
+      }
+
+      else -> {
+        visit(right, output, terminateLabel)
+        output.add(CopyTo(tempSlot))
+        Constant(tempSlot)
+      }
+    }
+
+    visit(left, output, terminateLabel)
+    return output.add(combiner(rightSlot))
+  }
+
   private fun visit(expr: Expression, output: MutableList<Instruction>, terminateLabel: Label) {
     when (expr) {
       is Inbox -> output.add(hrm.Inbox)
@@ -105,11 +135,13 @@ class Compiler(
             output.add(Jump(loopTop.n))
           }
           is Compare -> {
-            visit(expr.condition.right, output, terminateLabel)
-            output.add(CopyTo(tempSlot))
-
-            visit(expr.condition.left, output, terminateLabel)
-            output.add(Sub(Constant(tempSlot)))
+            visitBinary(
+              expr.condition.left,
+              expr.condition.right,
+              { Sub(it) },
+              output,
+              terminateLabel
+            )
 
             when (expr.condition.operator) {
               CompareOp.Equal -> output.add(JumpIfZero(loopTop.n))
@@ -122,7 +154,7 @@ class Compiler(
               CompareOp.GreaterThan -> TODO()
             }
           }
-        }.let{}
+        }.let {}
 
         output.add(afterLoop)
       }
@@ -131,7 +163,7 @@ class Compiler(
         val secondBlockLabel = newLabel()
         val after = newLabel()
 
-        val (jumpToSecond, secondBlockIsTrue) =when (expr.condition) {
+        val (jumpToSecond, secondBlockIsTrue) = when (expr.condition) {
           is True -> error("Don't do If(True)")
 
           is IsZero -> {
@@ -143,11 +175,13 @@ class Compiler(
             Pair(JumpIfZero(secondBlockLabel.n), false)
           }
           is Compare -> {
-            visit(expr.condition.right, output, terminateLabel)
-            output.add(CopyTo(tempSlot))
-
-            visit(expr.condition.left, output, terminateLabel)
-            output.add(Sub(Constant(tempSlot)))
+            visitBinary(
+              expr.condition.left,
+              expr.condition.right,
+              { Sub(it) },
+              output,
+              terminateLabel
+            )
 
             when (expr.condition.operator) {
               CompareOp.Equal -> Pair(JumpIfZero(secondBlockLabel.n) as Instruction, true)
@@ -175,20 +209,13 @@ class Compiler(
 
       Terminate -> output.add(Jump(terminateLabel.n))
 
-      is Add -> {
-        visit(expr.right, output, terminateLabel)
-        output.add(CopyTo(tempSlot))
+      is Add -> visitBinary(
+        expr.left, expr.right, { hrm.Add(it) }, output, terminateLabel
+      )
 
-        visit(expr.left, output, terminateLabel)
-        output.add(hrm.Add(Constant(tempSlot)))
-      }
-      is Subtract -> {
-        visit(expr.right, output, terminateLabel)
-        output.add(CopyTo(tempSlot))
-
-        visit(expr.left, output, terminateLabel)
-        output.add(Sub(Constant(tempSlot)))
-      }
+      is Subtract -> visitBinary(
+        expr.left, expr.right, { Sub(it) }, output, terminateLabel
+      )
 
       is Inc -> output.add(BumpUp(Constant(variableMap[expr.variable]!!)))
       is Dec -> output.add(BumpDown(Constant(variableMap[expr.variable]!!)))
