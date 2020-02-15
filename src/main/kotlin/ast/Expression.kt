@@ -1,4 +1,4 @@
-package lang
+package ast
 
 
 sealed class Expression {

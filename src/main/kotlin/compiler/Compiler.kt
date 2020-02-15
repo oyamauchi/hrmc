@@ -1,10 +1,10 @@
 package compiler
 
 import hrm.*
-import lang.*
-import lang.Add
-import lang.Inbox
-import lang.Outbox
+import ast.*
+import ast.Add
+import ast.Inbox
+import ast.Outbox
 import java.util.LinkedList
 import java.util.Queue
 
