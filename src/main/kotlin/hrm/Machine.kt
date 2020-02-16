@@ -121,7 +121,7 @@ class Machine(
 
       if (!jumped) {
         ip++
-        if (ip > program.size) {
+        if (ip >= program.size) {
           return outbox
         }
       }
