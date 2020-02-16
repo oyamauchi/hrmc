@@ -9,9 +9,11 @@ import java.util.LinkedList
 import java.util.Queue
 
 class Compiler(
-  private val constantPool: Map<Value, Int>,
+  presets: Map<Int, Value>,
   memorySize: Int
 ) {
+  private val constantPool = presets.map { it.value to it.key }.toMap()
+
   // Variables are allocated to slots in memory, starting from the highest indexes and going down.
   // This is so that the low indexes can be used as a zero-indexed array if needed.
   private val availableSlots: Queue<Int> =
