@@ -57,27 +57,31 @@ data class BumpDown(
 data class Label(
   val n: Int = 0
 ) : Instruction() {
-  override fun toString() = "  $n:"
+  override fun toString() = "  L$n:"
 }
 
 interface HasTargetLabel {
   val labelN: Int
+  fun withNewTarget(n: Int): Instruction
 }
 
 data class Jump(
   override val labelN: Int
 ) : Instruction(), HasTargetLabel {
   override fun toString() = "jump              $labelN"
+  override fun withNewTarget(n: Int) = copy(labelN = n)
 }
 
 data class JumpIfZero(
   override val labelN: Int
 ) : Instruction(), HasTargetLabel {
   override fun toString() = "jump if zero      $labelN"
+  override fun withNewTarget(n: Int) = copy(labelN = n)
 }
 
 data class JumpIfNegative(
   override val labelN: Int
 ) : Instruction(), HasTargetLabel {
   override fun toString() = "jump if negative  $labelN"
+  override fun withNewTarget(n: Int) = copy(labelN = n)
 }
