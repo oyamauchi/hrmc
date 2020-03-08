@@ -35,51 +35,33 @@ data class LetterConstant(val value: Char) : Expression()
 // Control flow
 ///////////////////////////////////////////////////////////////////////////////
 
-sealed class Condition {
-  abstract val subexpressions: List<Expression>
-}
-
-object True : Condition() {
-  override val subexpressions get() = emptyList<Expression>()
-}
-
 enum class CompareOp {
   Equal,
   NotEqual,
   LessThan,
-  GreaterThan
-}
-
-data class IsZero(
-  val expression: Expression
-) : Condition() {
-  override val subexpressions get() = listOf(expression)
-}
-
-data class IsNotZero(
-  val expression: Expression
-) : Condition() {
-  override val subexpressions get() = listOf(expression)
+  LessOrEqual,
+  GreaterThan,
+  GreaterOrEqual
 }
 
 data class Compare(
   val operator: CompareOp,
   val left: Expression,
   val right: Expression
-) : Condition() {
-  override val subexpressions get() = listOf(left, right)
+) {
+  val subexpressions get() = listOf(left, right)
 }
 
 data class While(
-  val condition: Condition,
+  val condition: Compare?,
   val body: List<Expression>
 ) : Expression() {
   override val subexpressions: List<Expression>
-    get() = condition.subexpressions + body
+    get() = (condition?.subexpressions ?: emptyList()) + body
 }
 
 data class If(
-  val condition: Condition,
+  val condition: Compare,
   val trueBody: List<Expression>,
   val falseBody: List<Expression>
 ) : Expression() {

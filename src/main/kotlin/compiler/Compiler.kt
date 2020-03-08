@@ -80,6 +80,37 @@ class Compiler(
     return output.add(combiner(rightSlot))
   }
 
+  private fun computeConditionalJump(condition: Compare): CondJump {
+    return when (condition.operator) {
+      CompareOp.Equal -> CondJump(condition.left, condition.right, { JumpIfZero(it.n) }, false)
+      CompareOp.NotEqual -> CondJump(condition.left, condition.right, { JumpIfZero(it.n) }, true)
+      CompareOp.LessThan -> CondJump(
+        condition.left,
+        condition.right,
+        { JumpIfNegative(it.n) },
+        false
+      )
+      CompareOp.LessOrEqual -> CondJump(
+        condition.right,
+        condition.left,
+        { JumpIfNegative(it.n) },
+        true
+      )
+      CompareOp.GreaterThan -> CondJump(
+        condition.right,
+        condition.left,
+        { JumpIfNegative(it.n) },
+        false
+      )
+      CompareOp.GreaterOrEqual -> CondJump(
+        condition.left,
+        condition.right,
+        { JumpIfNegative(it.n) },
+        true
+      )
+    }
+  }
+
   private fun visit(expr: Expression, output: MutableList<Instruction>, terminateLabel: Label) {
     when (expr) {
       is Inbox -> output.add(hrm.Inbox)
@@ -117,94 +148,66 @@ class Compiler(
         val conditionCheck = newLabel()
         val afterLoop = newLabel()
 
-        output.add(Jump(conditionCheck.n))
-        output.add(loopTop)
-        expr.body.forEach {
-          visit(it, output, terminateLabel)
+        val condition = expr.condition
+
+        if (condition == null) {
+          output.add(loopTop)
+          expr.body.forEach {
+            visit(it, output, terminateLabel)
+          }
+          output.add(Jump(loopTop.n))
+          return
         }
 
-        output.add(conditionCheck)
+        val (left, right, testInstr, negate) =
+          computeConditionalJump(expr.condition)
 
-        when (expr.condition) {
-          is True -> output.add(Jump(loopTop.n))
-          is IsZero -> {
-            visit(expr.condition.expression, output, terminateLabel)
-            output.add(JumpIfZero(loopTop.n))
+        val rightIsZero = right == IntConstant(0)
+
+        if (negate) {
+          output.add(conditionCheck)
+          if (!rightIsZero) {
+            visitBinary(left, right, { Sub(it) }, output, terminateLabel)
           }
-          is IsNotZero -> {
-            visit(expr.condition.expression, output, terminateLabel)
-            output.add(JumpIfZero(afterLoop.n))
-            output.add(Jump(loopTop.n))
+          output.add(testInstr(afterLoop))
+          expr.body.forEach { visit(it, output, terminateLabel) }
+          output.add(Jump(conditionCheck.n))
+          output.add(afterLoop)
+        } else {
+          output.add(Jump(conditionCheck.n))
+          output.add(loopTop)
+          expr.body.forEach { visit(it, output, terminateLabel) }
+          output.add(conditionCheck)
+          if (!rightIsZero) {
+            visitBinary(left, right, { Sub(it) }, output, terminateLabel)
           }
-          is Compare -> {
-            visitBinary(
-              expr.condition.left,
-              expr.condition.right,
-              { Sub(it) },
-              output,
-              terminateLabel
-            )
-
-            when (expr.condition.operator) {
-              CompareOp.Equal -> output.add(JumpIfZero(loopTop.n))
-              CompareOp.LessThan -> output.add(JumpIfNegative(loopTop.n))
-
-              CompareOp.NotEqual -> {
-                output.add(JumpIfZero(afterLoop.n))
-                output.add(Jump(loopTop.n))
-              }
-              CompareOp.GreaterThan -> TODO()
-            }
-          }
-        }.let {}
-
-        output.add(afterLoop)
+          output.add(testInstr(loopTop))
+        }
       }
 
       is If -> {
         val secondBlockLabel = newLabel()
         val after = newLabel()
 
-        val (jumpToSecond, secondBlockIsTrue) = when (expr.condition) {
-          is True -> error("Don't do If(True)")
+        val (left, right, testInstr, negate) = computeConditionalJump(expr.condition)
 
-          is IsZero -> {
-            visit(expr.condition.expression, output, terminateLabel)
-            Pair(JumpIfZero(secondBlockLabel.n), true)
-          }
-          is IsNotZero -> {
-            visit(expr.condition.expression, output, terminateLabel)
-            Pair(JumpIfZero(secondBlockLabel.n), false)
-          }
-          is Compare -> {
-            visitBinary(
-              expr.condition.left,
-              expr.condition.right,
-              { Sub(it) },
-              output,
-              terminateLabel
-            )
-
-            when (expr.condition.operator) {
-              CompareOp.Equal -> Pair(JumpIfZero(secondBlockLabel.n) as Instruction, true)
-              CompareOp.NotEqual -> Pair(JumpIfZero(secondBlockLabel.n), false)
-              CompareOp.LessThan -> Pair(JumpIfNegative(secondBlockLabel.n), true)
-              CompareOp.GreaterThan -> Pair(JumpIfNegative(secondBlockLabel.n), false)
-            }
-          }
+        if (right != IntConstant(0)) {
+          visitBinary(left, right, { Sub(it) }, output, terminateLabel)
         }
 
-        output.add(jumpToSecond)
+        output.add(testInstr(secondBlockLabel))
 
-        val (firstBlock, secondBlock) = if (secondBlockIsTrue) {
-          Pair(expr.falseBody, expr.trueBody)
+        if (negate) {
+          expr.trueBody.forEach { visit(it, output, terminateLabel) }
+          output.add(Jump(after.n))
+          output.add(secondBlockLabel)
+          expr.falseBody.forEach { visit(it, output, terminateLabel) }
         } else {
-          Pair(expr.trueBody, expr.falseBody)
+          expr.falseBody.forEach { visit(it, output, terminateLabel) }
+          output.add(Jump(after.n))
+          output.add(secondBlockLabel)
+          expr.trueBody.forEach { visit(it, output, terminateLabel) }
         }
-        firstBlock.forEach { visit(it, output, terminateLabel) }
-        output.add(Jump(after.n))
-        output.add(secondBlockLabel)
-        secondBlock.forEach { visit(it, output, terminateLabel) }
 
         output.add(after)
       }
@@ -223,4 +226,15 @@ class Compiler(
       is Dec -> output.add(BumpDown(Constant(variableMap[expr.variable]!!)))
     }.let {}
   }
+
+  /**
+   * Compute left - right. Then, if negate is true, pass the false label to testInstr and output
+   * the result. If negate is false, pass the true label to testInstr and output the result.
+   */
+  private data class CondJump(
+    val left: Expression,
+    val right: Expression,
+    val testInstr: (Label) -> Instruction,
+    val negate: Boolean
+  )
 }
