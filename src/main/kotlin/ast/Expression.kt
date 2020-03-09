@@ -1,27 +1,19 @@
 package ast
 
 
-sealed class Expression {
-  open val subexpressions: List<Expression> = emptyList()
-}
+sealed class Expression
 
 object Inbox : Expression()
 
-data class Outbox(val value: Expression) : Expression() {
-  override val subexpressions get() = listOf(value)
-}
+data class Outbox(val value: Expression) : Expression()
 
 data class ReadVar(val variable: String) : Expression()
 
-data class AssignVar(val variable: String, val value: Expression) : Expression() {
-  override val subexpressions get() = listOf(value)
-}
+data class AssignVar(val variable: String, val value: Expression) : Expression()
 
 data class ReadMem(val address: String) : Expression()
 
-data class WriteMem(val address: String, val value: Expression) : Expression() {
-  override val subexpressions get() = listOf(value)
-}
+data class WriteMem(val address: String, val value: Expression) : Expression()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Constants
@@ -48,26 +40,18 @@ data class Compare(
   val operator: CompareOp,
   val left: Expression,
   val right: Expression
-) {
-  val subexpressions get() = listOf(left, right)
-}
+)
 
 data class While(
   val condition: Compare?,
   val body: List<Expression>
-) : Expression() {
-  override val subexpressions: List<Expression>
-    get() = (condition?.subexpressions ?: emptyList()) + body
-}
+) : Expression()
 
 data class If(
   val condition: Compare,
   val trueBody: List<Expression>,
   val falseBody: List<Expression>
-) : Expression() {
-  override val subexpressions: List<Expression>
-    get() = condition.subexpressions + trueBody + falseBody
-}
+) : Expression()
 
 object Terminate : Expression()
 
@@ -79,16 +63,12 @@ object Terminate : Expression()
 data class Add(
   val left: Expression,
   val right: Expression
-) : Expression() {
-  override val subexpressions get() = listOf(left, right)
-}
+) : Expression()
 
 data class Subtract(
   val left: Expression,
   val right: Expression
-) : Expression() {
-  override val subexpressions get() = listOf(left, right)
-}
+) : Expression()
 
 data class Inc(
   val variable: String

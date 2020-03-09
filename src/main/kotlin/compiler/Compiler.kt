@@ -30,22 +30,15 @@ class Compiler(
     labelCounter = 0
     terminateLabel = newLabel()
 
-    allocateVars(program)
-
     program.forEach { visit(it) }
     output.add(terminateLabel)
 
     return output.toList()
   }
 
-  private fun allocateVars(program: List<Expression>) {
-    program.forEach {
-      if (it is AssignVar && it.variable !in variableMap) {
-        val slot = availableSlots.poll() ?: error("Could not allocate enough variables")
-        variableMap[it.variable] = slot
-      }
-
-      allocateVars(it.subexpressions)
+  private fun getVarSlot(variable: String): Int {
+    return variableMap.computeIfAbsent(variable) {
+      availableSlots.poll() ?: error("Could not allocate enough variables")
     }
   }
 
@@ -59,15 +52,15 @@ class Compiler(
     combiner: (MemRef) -> Instruction
   ): Boolean {
     val rightSlot: MemRef = when (right) {
-      is ReadVar -> Constant(variableMap[right.variable]!!)
-      is ReadMem -> Dereference(variableMap[right.address]!!)
+      is ReadVar -> Constant(getVarSlot(right.variable))
+      is ReadMem -> Dereference(getVarSlot(right.address))
       is AssignVar -> {
         visit(right)
-        Constant(variableMap[right.variable]!!)
+        Constant(getVarSlot(right.variable))
       }
       is WriteMem -> {
         visit(right)
-        Dereference(variableMap[right.address]!!)
+        Dereference(getVarSlot(right.address))
       }
 
       else -> {
@@ -120,16 +113,16 @@ class Compiler(
         output.add(hrm.Outbox)
       }
 
-      is ReadVar -> output.add(CopyFrom(variableMap[expr.variable]!!))
+      is ReadVar -> output.add(CopyFrom(getVarSlot(expr.variable)))
       is AssignVar -> {
         visit(expr.value)
-        output.add(CopyTo(variableMap[expr.variable]!!))
+        output.add(CopyTo(getVarSlot(expr.variable)))
       }
 
-      is ReadMem -> output.add(CopyFrom(Dereference(variableMap[expr.address]!!)))
+      is ReadMem -> output.add(CopyFrom(Dereference(getVarSlot(expr.address))))
       is WriteMem -> {
         visit(expr.value)
-        output.add(CopyTo(Dereference(variableMap[expr.address]!!)))
+        output.add(CopyTo(Dereference(getVarSlot(expr.address))))
       }
 
       is IntConstant -> {
@@ -217,8 +210,8 @@ class Compiler(
 
       is Subtract -> visitBinary(expr.left, expr.right) { Sub(it) }
 
-      is Inc -> output.add(BumpUp(Constant(variableMap[expr.variable]!!)))
-      is Dec -> output.add(BumpDown(Constant(variableMap[expr.variable]!!)))
+      is Inc -> output.add(BumpUp(Constant(getVarSlot(expr.variable))))
+      is Dec -> output.add(BumpDown(Constant(getVarSlot(expr.variable))))
     }.let {}
   }
 
