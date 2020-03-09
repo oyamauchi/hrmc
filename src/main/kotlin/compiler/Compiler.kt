@@ -22,17 +22,20 @@ class Compiler(
   private val tempSlot: Int = availableSlots.poll()
 
   private var labelCounter = 0
+  private val output = mutableListOf<Instruction>()
+  private lateinit var terminateLabel: Label
 
   fun compile(program: List<Expression>): List<Instruction> {
-    val output = mutableListOf<Instruction>()
-    val terminateLabel = newLabel()
+    output.clear()
+    labelCounter = 0
+    terminateLabel = newLabel()
 
     allocateVars(program)
 
-    program.forEach { visit(it, output, terminateLabel) }
+    program.forEach { visit(it) }
     output.add(terminateLabel)
 
-    return output
+    return output.toList()
   }
 
   private fun allocateVars(program: List<Expression>) {
@@ -53,30 +56,28 @@ class Compiler(
   private fun visitBinary(
     left: Expression,
     right: Expression,
-    combiner: (MemRef) -> Instruction,
-    output: MutableList<Instruction>,
-    terminateLabel: Label
+    combiner: (MemRef) -> Instruction
   ): Boolean {
     val rightSlot: MemRef = when (right) {
       is ReadVar -> Constant(variableMap[right.variable]!!)
       is ReadMem -> Dereference(variableMap[right.address]!!)
       is AssignVar -> {
-        visit(right, output, terminateLabel)
+        visit(right)
         Constant(variableMap[right.variable]!!)
       }
       is WriteMem -> {
-        visit(right, output, terminateLabel)
+        visit(right)
         Dereference(variableMap[right.address]!!)
       }
 
       else -> {
-        visit(right, output, terminateLabel)
+        visit(right)
         output.add(CopyTo(tempSlot))
         Constant(tempSlot)
       }
     }
 
-    visit(left, output, terminateLabel)
+    visit(left)
     return output.add(combiner(rightSlot))
   }
 
@@ -111,23 +112,23 @@ class Compiler(
     }
   }
 
-  private fun visit(expr: Expression, output: MutableList<Instruction>, terminateLabel: Label) {
+  private fun visit(expr: Expression) {
     when (expr) {
       is Inbox -> output.add(hrm.Inbox)
       is Outbox -> {
-        visit(expr.value, output, terminateLabel)
+        visit(expr.value)
         output.add(hrm.Outbox)
       }
 
       is ReadVar -> output.add(CopyFrom(variableMap[expr.variable]!!))
       is AssignVar -> {
-        visit(expr.value, output, terminateLabel)
+        visit(expr.value)
         output.add(CopyTo(variableMap[expr.variable]!!))
       }
 
       is ReadMem -> output.add(CopyFrom(Dereference(variableMap[expr.address]!!)))
       is WriteMem -> {
-        visit(expr.value, output, terminateLabel)
+        visit(expr.value)
         output.add(CopyTo(Dereference(variableMap[expr.address]!!)))
       }
 
@@ -152,9 +153,7 @@ class Compiler(
 
         if (condition == null) {
           output.add(loopTop)
-          expr.body.forEach {
-            visit(it, output, terminateLabel)
-          }
+          expr.body.forEach { visit(it) }
           output.add(Jump(loopTop.n))
           return
         }
@@ -167,19 +166,19 @@ class Compiler(
         if (negate) {
           output.add(conditionCheck)
           if (!rightIsZero) {
-            visitBinary(left, right, { Sub(it) }, output, terminateLabel)
+            visitBinary(left, right) { Sub(it) }
           }
           output.add(testInstr(afterLoop))
-          expr.body.forEach { visit(it, output, terminateLabel) }
+          expr.body.forEach { visit(it) }
           output.add(Jump(conditionCheck.n))
           output.add(afterLoop)
         } else {
           output.add(Jump(conditionCheck.n))
           output.add(loopTop)
-          expr.body.forEach { visit(it, output, terminateLabel) }
+          expr.body.forEach { visit(it) }
           output.add(conditionCheck)
           if (!rightIsZero) {
-            visitBinary(left, right, { Sub(it) }, output, terminateLabel)
+            visitBinary(left, right) { Sub(it) }
           }
           output.add(testInstr(loopTop))
         }
@@ -192,21 +191,21 @@ class Compiler(
         val (left, right, testInstr, negate) = computeConditionalJump(expr.condition)
 
         if (right != IntConstant(0)) {
-          visitBinary(left, right, { Sub(it) }, output, terminateLabel)
+          visitBinary(left, right) { Sub(it) }
         }
 
         output.add(testInstr(secondBlockLabel))
 
         if (negate) {
-          expr.trueBody.forEach { visit(it, output, terminateLabel) }
+          expr.trueBody.forEach { visit(it) }
           output.add(Jump(after.n))
           output.add(secondBlockLabel)
-          expr.falseBody.forEach { visit(it, output, terminateLabel) }
+          expr.falseBody.forEach { visit(it) }
         } else {
-          expr.falseBody.forEach { visit(it, output, terminateLabel) }
+          expr.falseBody.forEach { visit(it) }
           output.add(Jump(after.n))
           output.add(secondBlockLabel)
-          expr.trueBody.forEach { visit(it, output, terminateLabel) }
+          expr.trueBody.forEach { visit(it) }
         }
 
         output.add(after)
@@ -214,13 +213,9 @@ class Compiler(
 
       Terminate -> output.add(Jump(terminateLabel.n))
 
-      is Add -> visitBinary(
-        expr.left, expr.right, { hrm.Add(it) }, output, terminateLabel
-      )
+      is Add -> visitBinary(expr.left, expr.right) { hrm.Add(it) }
 
-      is Subtract -> visitBinary(
-        expr.left, expr.right, { Sub(it) }, output, terminateLabel
-      )
+      is Subtract -> visitBinary(expr.left, expr.right) { Sub(it) }
 
       is Inc -> output.add(BumpUp(Constant(variableMap[expr.variable]!!)))
       is Dec -> output.add(BumpDown(Constant(variableMap[expr.variable]!!)))
