@@ -9,7 +9,7 @@ import java.util.LinkedList
 import java.util.Queue
 
 class Compiler(
-  presets: Map<Int, Value>,
+  presets: Map<Int, hrm.Value>,
   memorySize: Int
 ) {
   private val constantPool = presets.map { it.value to it.key }.toMap()
