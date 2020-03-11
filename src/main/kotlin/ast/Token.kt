@@ -1,7 +1,5 @@
 package ast
 
-import hrm.Value
-
 enum class SymbolType {
   WHILE,
   IF,
@@ -30,4 +28,5 @@ sealed class Token
 
 data class Symbol(val type: SymbolType): Token()
 data class Identifier(val name: String): Token()
-data class Value(val value: Value): Token()
+data class IntToken(val value: Int): Token()
+data class LetterToken(val value: Char): Token()
