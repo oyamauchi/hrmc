@@ -19,14 +19,14 @@ object Outbox : Instruction() {
 data class CopyFrom(
   val source: MemRef
 ) : Instruction() {
-  constructor(index: Int) : this(Constant(index))
+  constructor(index: Int) : this(FixedAddr(index))
   override fun toString() = "copyfrom $source"
 }
 
 data class CopyTo(
   val dest: MemRef
 ) : Instruction() {
-  constructor(index: Int) : this(Constant(index))
+  constructor(index: Int) : this(FixedAddr(index))
   override fun toString() = "copyto $dest"
 }
 

@@ -52,11 +52,11 @@ class Compiler(
     combiner: (MemRef) -> Instruction
   ): Boolean {
     val rightSlot: MemRef = when (right) {
-      is ReadVar -> Constant(getVarSlot(right.variable))
+      is ReadVar -> FixedAddr(getVarSlot(right.variable))
       is ReadMem -> Dereference(getVarSlot(right.address))
       is AssignVar -> {
         visit(right)
-        Constant(getVarSlot(right.variable))
+        FixedAddr(getVarSlot(right.variable))
       }
       is WriteMem -> {
         visit(right)
@@ -66,7 +66,7 @@ class Compiler(
       else -> {
         visit(right)
         output.add(CopyTo(tempSlot))
-        Constant(tempSlot)
+        FixedAddr(tempSlot)
       }
     }
 
@@ -210,8 +210,8 @@ class Compiler(
 
       is Subtract -> visitBinary(expr.left, expr.right) { Sub(it) }
 
-      is Inc -> output.add(BumpUp(Constant(getVarSlot(expr.variable))))
-      is Dec -> output.add(BumpDown(Constant(getVarSlot(expr.variable))))
+      is Inc -> output.add(BumpUp(FixedAddr(getVarSlot(expr.variable))))
+      is Dec -> output.add(BumpDown(FixedAddr(getVarSlot(expr.variable))))
     }.let {}
   }
 

@@ -3,7 +3,7 @@ package hrm
 
 sealed class MemRef
 
-data class Constant(
+data class FixedAddr(
   val index: Int
 ) : MemRef() {
   override fun toString() = "$index"

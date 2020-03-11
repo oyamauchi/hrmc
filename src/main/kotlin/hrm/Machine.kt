@@ -130,7 +130,7 @@ class Machine(
 
   private fun read(memory: Array<Value?>, address: MemRef): Value? {
     return when (address) {
-      is Constant -> memory[address.index]
+      is FixedAddr -> memory[address.index]
       is Dereference -> {
         val addressInMemory = memory[address.index] as? IntValue
           ?: error("Cannot dereference empty or non-int cell $address")
@@ -141,7 +141,7 @@ class Machine(
 
   private fun write(memory: Array<Value?>, address: MemRef, value: Value) {
     when (address) {
-      is Constant -> memory[address.index] = value
+      is FixedAddr -> memory[address.index] = value
       is Dereference -> {
         val addressInMemory = memory[address.index] as? IntValue
           ?: error("Cannot dereference empty or non-int cell $address")
