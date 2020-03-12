@@ -40,3 +40,13 @@ data class LetterValue(
     }
   }
 }
+
+fun values(vararg vs: Any): List<Value> {
+  return vs.map {
+    when (it) {
+      is Int -> IntValue(it)
+      is Char -> LetterValue(it)
+      else -> throw RuntimeException("Can't use $it as value")
+    }
+  }
+}

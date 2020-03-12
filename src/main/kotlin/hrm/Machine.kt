@@ -16,12 +16,12 @@ class Machine(
     val numbers = labels.map { it.n }.toSet()
 
     if (labels.size != numbers.size) {
-      throw RuntimeException("All labels must have different numbers")
+      error("All labels must have different numbers")
     }
 
     val targetedNumbers = program.filterIsInstance<HasTargetLabel>().map { it.labelN }
     if (!numbers.containsAll(targetedNumbers)) {
-      throw RuntimeException("All jumps must be to labels that exist")
+      error("All jumps must be to labels that exist")
     }
   }
 
