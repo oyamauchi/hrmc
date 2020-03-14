@@ -58,7 +58,8 @@ class Machine(
           register = null
         }
 
-        is CopyFrom -> register = read(memory, instr.source) ?: error("Tried to read empty cell")
+        is CopyFrom -> register = read(memory, instr.source)
+          ?: error("Tried to read empty cell ${instr.source}")
 
         is CopyTo -> register?.let { write(memory, instr.dest, it) }
           ?: error("Tried to write empty register")

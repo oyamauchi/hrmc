@@ -158,7 +158,9 @@ class Compiler(
 
         if (negate) {
           output.add(conditionCheck)
-          if (!rightIsZero) {
+          if (rightIsZero) {
+            visit(left)
+          } else {
             visitBinary(left, right) { Sub(it) }
           }
           output.add(testInstr(afterLoop))
@@ -170,7 +172,9 @@ class Compiler(
           output.add(loopTop)
           expr.body.forEach { visit(it) }
           output.add(conditionCheck)
-          if (!rightIsZero) {
+          if (rightIsZero) {
+            visit(left)
+          } else {
             visitBinary(left, right) { Sub(it) }
           }
           output.add(testInstr(loopTop))
@@ -185,6 +189,8 @@ class Compiler(
 
         if (right != IntConstant(0)) {
           visitBinary(left, right) { Sub(it) }
+        } else {
+          visit(left)
         }
 
         output.add(testInstr(secondBlockLabel))
