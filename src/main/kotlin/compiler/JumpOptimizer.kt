@@ -87,7 +87,7 @@ class JumpOptimizer(
     return indexes.isNotEmpty()
   }
 
-  private fun indexOf(labelN: Int): Int {
+  private fun indexOf(labelN: Char): Int {
     return program.indexOf(Label(labelN))
   }
 }

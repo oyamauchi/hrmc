@@ -7,17 +7,17 @@ class MachineTest {
 
   @Test(expected = MachineException::class)
   fun `duplicate labels`() {
-    Machine(listOf(Label(0), Inbox, Label(0)))
+    Machine(listOf(Label('a'), Inbox, Label('a')))
   }
 
   @Test(expected = MachineException::class)
   fun `nonexistent label`() {
-    Machine(listOf(Jump(0)))
+    Machine(listOf(Jump('a')))
   }
 
   @Test(expected = MachineException::class, timeout = 10000L)
   fun `infinite loop`() {
-    Machine(listOf(Label(0), Jump(0))).execute(values(1, 2, 3))
+    Machine(listOf(Label('a'), Jump('a'))).execute(values(1, 2, 3))
   }
 
   @Test(expected = MachineException::class)
@@ -27,7 +27,7 @@ class MachineTest {
 
   @Test
   fun `inbox and outbox`() {
-    val m = Machine(listOf(Label(0), Inbox, Outbox, Jump(0)))
+    val m = Machine(listOf(Label('a'), Inbox, Outbox, Jump('a')))
 
     assertEquals(emptyList(), m.execute(emptyList()))
     assertEquals(values(1, 2, 'T'), m.execute(values(1, 2, 'T')))

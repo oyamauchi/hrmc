@@ -23,13 +23,13 @@ class Compiler(
   private val tempSlot: Int = availableSlots.poll()
 
   private val breakLabelStack: Stack<Label> = Stack()
-  private var labelCounter = 0
+  private var labelCounter = 'a'
   private val output = mutableListOf<Instruction>()
   private lateinit var terminateLabel: Label
 
   fun compile(program: List<Expression>): List<Instruction> {
     output.clear()
-    labelCounter = 0
+    labelCounter = 'a'
     terminateLabel = newLabel()
 
     program.forEach { visit(it) }

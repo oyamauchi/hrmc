@@ -9,79 +9,79 @@ package hrm
 sealed class Instruction
 
 object Inbox : Instruction() {
-  override fun toString() = "-> inbox"
+  override fun toString() = "    INBOX"
 }
 
 object Outbox : Instruction() {
-  override fun toString() = "outbox ->"
+  override fun toString() = "    OUTBOX"
 }
 
 data class CopyFrom(
   val source: MemRef
 ) : Instruction() {
   constructor(index: Int) : this(FixedAddr(index))
-  override fun toString() = "copyfrom $source"
+  override fun toString() = "    COPYFROM $source"
 }
 
 data class CopyTo(
   val dest: MemRef
 ) : Instruction() {
   constructor(index: Int) : this(FixedAddr(index))
-  override fun toString() = "copyto $dest"
+  override fun toString() = "    COPYTO   $dest"
 }
 
 data class Add(
   val addend: MemRef
 ) : Instruction() {
-  override fun toString() = "add $addend"
+  override fun toString() = "    ADD      $addend"
 }
 
 data class Sub(
   val subtrahend: MemRef
 ) : Instruction() {
-  override fun toString() = "sub $subtrahend"
+  override fun toString() = "    SUB      $subtrahend"
 }
 
 data class BumpUp(
   val operand: MemRef
 ) : Instruction() {
-  override fun toString() = "bump+ $operand"
+  override fun toString() = "    BUMPUP   $operand"
 }
 
 data class BumpDown(
   val operand: MemRef
 ) : Instruction() {
-  override fun toString() = "bump- $operand"
+  override fun toString() = "    BUMPDOWN $operand"
 }
 
 data class Label(
-  val n: Int = 0
+  val n: Char
 ) : Instruction() {
-  override fun toString() = "  L$n:"
+  override fun toString() = "$n:"
 }
 
 interface HasTargetLabel {
-  val labelN: Int
-  fun withNewTarget(n: Int): Instruction
+  val labelN: Char
+  fun withNewTarget(n: Char): Instruction
 }
 
 data class Jump(
-  override val labelN: Int
+  override val labelN: Char
 ) : Instruction(), HasTargetLabel {
-  override fun toString() = "jump              $labelN"
-  override fun withNewTarget(n: Int) = copy(labelN = n)
+  override fun toString() = "    JUMP     $labelN"
+  override fun withNewTarget(n: Char) = copy(labelN = n)
 }
 
 data class JumpIfZero(
-  override val labelN: Int
+  override val labelN: Char
 ) : Instruction(), HasTargetLabel {
-  override fun toString() = "jump if zero      $labelN"
-  override fun withNewTarget(n: Int) = copy(labelN = n)
+  override fun toString() = "    JUMPZ    $labelN"
+  override fun withNewTarget(n: Char) = copy(labelN = n)
 }
 
 data class JumpIfNegative(
-  override val labelN: Int
+  override val labelN: Char
 ) : Instruction(), HasTargetLabel {
-  override fun toString() = "jump if negative  $labelN"
-  override fun withNewTarget(n: Int) = copy(labelN = n)
+  override fun toString() = "    JUMPN    $labelN"
+  override fun withNewTarget(n: Char) = copy(labelN = n)
 }

@@ -151,7 +151,7 @@ class Machine(
     }
   }
 
-  private fun indexOf(labelN: Int): Int {
+  private fun indexOf(labelN: Char): Int {
     val index = program.indexOf(Label(labelN))
     if (index < 0) {
       throw RuntimeException("Unknown label $labelN")
