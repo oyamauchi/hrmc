@@ -21,6 +21,7 @@ enum class SymbolType {
   MINUS_MINUS,
   PLUS,
   MINUS,
+  BREAK,
   RETURN
 }
 
