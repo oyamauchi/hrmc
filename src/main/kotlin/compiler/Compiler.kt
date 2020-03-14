@@ -210,8 +210,10 @@ class Compiler(
 
       is Subtract -> visitBinary(expr.left, expr.right) { Sub(it) }
 
-      is Inc -> output.add(BumpUp(FixedAddr(getVarSlot(expr.variable))))
-      is Dec -> output.add(BumpDown(FixedAddr(getVarSlot(expr.variable))))
+      is IncVar -> output.add(BumpUp(FixedAddr(getVarSlot(expr.variable))))
+      is DecVar -> output.add(BumpDown(FixedAddr(getVarSlot(expr.variable))))
+      is IncMem -> output.add(BumpUp(Dereference(getVarSlot(expr.address))))
+      is DecMem -> output.add(BumpDown(Dereference(getVarSlot(expr.address))))
     }.let {}
   }
 

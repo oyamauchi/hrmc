@@ -70,10 +70,18 @@ data class Subtract(
   val right: Expression
 ) : Expression()
 
-data class Inc(
+data class IncVar(
   val variable: String
 ) : Expression()
 
-data class Dec(
+data class IncMem(
+  val address: String
+) : Expression()
+
+data class DecVar(
   val variable: String
+) : Expression()
+
+data class DecMem(
+  val address: String
 ) : Expression()
