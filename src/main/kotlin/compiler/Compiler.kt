@@ -7,9 +7,10 @@ import ast.Inbox
 import ast.Outbox
 import java.util.LinkedList
 import java.util.Queue
+import java.util.Stack
 
 class Compiler(
-  presets: Map<Int, hrm.Value>,
+  presets: Map<Int, Value>,
   memorySize: Int
 ) {
   private val constantPool = presets.map { it.value to it.key }.toMap()
@@ -21,6 +22,7 @@ class Compiler(
   private val variableMap: MutableMap<String, Int> = mutableMapOf()
   private val tempSlot: Int = availableSlots.poll()
 
+  private val breakLabelStack: Stack<Label> = Stack()
   private var labelCounter = 0
   private val output = mutableListOf<Instruction>()
   private lateinit var terminateLabel: Label
@@ -142,12 +144,15 @@ class Compiler(
         val conditionCheck = newLabel()
         val afterLoop = newLabel()
 
+        breakLabelStack.push(afterLoop)
+
         val condition = expr.condition
 
         if (condition == null) {
           output.add(loopTop)
           expr.body.forEach { visit(it) }
           output.add(Jump(loopTop.n))
+          output.add(afterLoop)
           return
         }
 
@@ -166,7 +171,6 @@ class Compiler(
           output.add(testInstr(afterLoop))
           expr.body.forEach { visit(it) }
           output.add(Jump(conditionCheck.n))
-          output.add(afterLoop)
         } else {
           output.add(Jump(conditionCheck.n))
           output.add(loopTop)
@@ -179,6 +183,10 @@ class Compiler(
           }
           output.add(testInstr(loopTop))
         }
+
+        output.add(afterLoop)
+        breakLabelStack.pop()
+        true
       }
 
       is If -> {
@@ -211,6 +219,8 @@ class Compiler(
       }
 
       Terminate -> output.add(Jump(terminateLabel.n))
+
+      Break -> output.add(Jump(breakLabelStack.lastElement().n))
 
       is Add -> visitBinary(expr.left, expr.right) { hrm.Add(it) }
 
