@@ -11,6 +11,7 @@ enum class SymbolType {
   LEFT_PAREN,
   RIGHT_PAREN,
   EQUAL,
+  EQUAL_EQUAL,
   NOT_EQUAL,
   LESS_THAN,
   GREATER_THAN,

@@ -10,6 +10,7 @@ fun lex(text: String): List<Token> {
     "\\(".toRegex() to { _ -> Symbol(SymbolType.LEFT_PAREN) },
     "\\)".toRegex() to { _ -> Symbol(SymbolType.RIGHT_PAREN) },
     "!=".toRegex() to { _ -> Symbol(SymbolType.NOT_EQUAL) },
+    "==".toRegex() to { _ -> Symbol(SymbolType.EQUAL_EQUAL) },
     "=".toRegex() to { _ -> Symbol(SymbolType.EQUAL) },
     "\\*".toRegex() to { _ -> Symbol(SymbolType.STAR) },
     "<=".toRegex() to { _ -> Symbol(SymbolType.LESS_OR_EQUAL) },
