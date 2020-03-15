@@ -2,11 +2,11 @@ package ast
 
 /*
 start:
-- expr-list
+- expr*
 
-expr-list
-- empty
-- expr expr-list
+braced-expr-list
+- LBRACE RBRACE
+- LBRACE expr* RBRACE
 
 expr:
 - term PLUS term
@@ -17,14 +17,14 @@ term:
 - letter
 - int
 - LPAREN expr RPAREN
-- while [ LPAREN condition RPAREN ] LBRACE expr-list RBRACE
-- if LPAREN condition RPAREN LBRACE expr-list RBRACE [ else LBRACE expr-list RBRACE ]
+- while [ LPAREN condition RPAREN ] braced-expr-list
+- if LPAREN condition RPAREN braced-expr-list [ else braced-expr-list ]
 - RETURN
 - BREAK
 - CONTINUE
 - INBOX LPAREN RPAREN
 - OUTBOX LPAREN expr RPAREN
-- lval EQUAL expr
+- lval [ EQUAL expr ]
 - PLUS_PLUS lval
 - MINUS_MINUS lval
 
@@ -43,43 +43,28 @@ condition:
  */
 class Parser(private val tokens: List<Token>) {
   private var position = 0
-  private var maxFailPosition = -1
 
   fun parse(): List<Expression> {
-    val result = readExpressionList()
-    if (position < tokens.size) {
-      throw IllegalArgumentException(
-        "Tokens at farthest: ${tokens.subList(maxFailPosition, tokens.size)}")
+    val result = mutableListOf<Expression>()
+    while (position < tokens.size) {
+      result.add(readExpr())
     }
     return result
   }
 
   private class ParseException(
-    val position: Int,
-    message: String? = null
-  ) : RuntimeException(message)
-
-  private fun <T> withMark(parse: () -> T): T? {
-    val original = position
-    return try {
-      parse()
-    } catch (e: ParseException) {
-      if (position > maxFailPosition) {
-        maxFailPosition = position
-      }
-      position = original
-      null
-    }
-  }
+    position: Int,
+    message: String
+  ) : RuntimeException("Parse error at token $position: $message")
 
   private fun expect(vararg symbolTypes: SymbolType): SymbolType {
     if (position >= tokens.size) {
-      throw ParseException(position)
+      throw ParseException(position, "Unexpected end of input")
     }
 
     val token = tokens[position]
     if (token !is Symbol || token.type !in symbolTypes) {
-      throw ParseException(position)
+      throw ParseException(position, "Expected ${symbolTypes.toList()}; found $token")
     }
 
     position++
@@ -90,171 +75,198 @@ class Parser(private val tokens: List<Token>) {
     return position < tokens.size && tokens[position] == Symbol(symbolType)
   }
 
-  private fun readExpressionList(): List<Expression> {
-    return withMark {
-      val expr = readExpr()
-      listOf(expr) + readExpressionList()
+  private fun readBracedExprList(): List<Expression> {
+    expect(SymbolType.LEFT_BRACE)
+
+    val result = mutableListOf<Expression>()
+    while (!headIs(SymbolType.RIGHT_BRACE)) {
+      result.add(readExpr())
     }
-      ?: emptyList()
+
+    expect(SymbolType.RIGHT_BRACE)
+    return result
   }
 
   private fun readExpr(): Expression {
-    return withMark {
-      val left = readTerm()
-      when {
-        headIs(SymbolType.PLUS) -> {
-          expect(SymbolType.PLUS)
-          val right = readTerm()
-          Add(left, right)
-        }
-        headIs(SymbolType.MINUS) -> {
-          expect(SymbolType.MINUS)
-          val right = readTerm()
-          Subtract(left, right)
-        }
-        else -> left
+    val left = readTerm()
+    return when {
+      headIs(SymbolType.PLUS) -> {
+        expect(SymbolType.PLUS)
+        val right = readTerm()
+        Add(left, right)
       }
-    } ?: throw ParseException(position)
+      headIs(SymbolType.MINUS) -> {
+        expect(SymbolType.MINUS)
+        val right = readTerm()
+        Subtract(left, right)
+      }
+      else -> left
+    }
   }
 
   private fun readTerm(): Expression {
     if (position >= tokens.size) {
-      throw ParseException(position)
+      throw ParseException(position, "Unexpected end of input")
     }
 
-    val simpleToken = tokens[position].let {
-      when (it) {
-        is IntToken -> IntConstant(it.value)
-        is LetterToken -> LetterConstant(it.value)
-        Symbol(SymbolType.RETURN) -> Terminate
-        Symbol(SymbolType.BREAK) -> Break
-        Symbol(SymbolType.CONTINUE) -> Continue
-        else -> null
+    return when (val head = tokens[position]) {
+      is IntToken -> {
+        position++
+        IntConstant(head.value)
       }
-    }
+      is LetterToken -> {
+        position++
+        LetterConstant(head.value)
+      }
 
-    if (simpleToken != null) {
-      position++
-      return simpleToken
-    }
-
-    return withMark {
-      expect(SymbolType.INBOX)
-      expect(SymbolType.LEFT_PAREN)
-      expect(SymbolType.RIGHT_PAREN)
-      Inbox
-    }
-      ?: withMark {
-        expect(SymbolType.OUTBOX)
-        expect(SymbolType.LEFT_PAREN)
-        val operand = readExpr()
-        expect(SymbolType.RIGHT_PAREN)
-        Outbox(operand)
-      }
-      ?: withMark {
-        expect(SymbolType.WHILE)
-        val condition = if (headIs(SymbolType.LEFT_PAREN)) {
-          expect(SymbolType.LEFT_PAREN)
-          val c = readCondition()
-          expect(SymbolType.RIGHT_PAREN)
-          c
-        } else {
-          null
-        }
-        expect(SymbolType.LEFT_BRACE)
-        val body = readExpressionList()
-        expect(SymbolType.RIGHT_BRACE)
-        While(condition, body)
-      }
-      ?: withMark {
-        expect(SymbolType.IF)
-        expect(SymbolType.LEFT_PAREN)
-        val condition = readCondition()
-          ?: throw ParseException(position, "if without condition")
-        expect(SymbolType.RIGHT_PAREN)
-        expect(SymbolType.LEFT_BRACE)
-        val trueBody = readExpressionList()
-        expect(SymbolType.RIGHT_BRACE)
-        val falseBody = if (headIs(SymbolType.ELSE)) {
-          expect(SymbolType.ELSE)
-          expect(SymbolType.LEFT_BRACE)
-          val body = readExpressionList()
-          expect(SymbolType.RIGHT_BRACE)
-          body
-        } else {
-          emptyList()
-        }
-        If(condition, trueBody, falseBody)
-      }
-      ?: withMark {
-        expect(SymbolType.LEFT_PAREN)
-        val expr = readExpr()
-        expect(SymbolType.RIGHT_PAREN)
-        expr
-      }
-      ?: withMark {
-        val (name, isDereference) = readLval()
-        expect(SymbolType.EQUAL)
-        val right = readExpr()
-        if (isDereference) {
-          WriteMem(name, right)
-        } else {
+      is Identifier -> {
+        val name = readLval().first
+        if (headIs(SymbolType.EQUAL)) {
+          expect(SymbolType.EQUAL)
+          val right = readExpr()
           AssignVar(name, right)
-        }
-      }
-      ?: withMark {
-        val (name, isDereference) = readLval()
-        if (isDereference) {
-          ReadMem(name)
         } else {
           ReadVar(name)
         }
       }
-      ?: withMark {
-        val operator = expect(SymbolType.PLUS_PLUS, SymbolType.MINUS_MINUS)
-        val (name, isDereference) = readLval()
-        if (isDereference) {
-          if (operator == SymbolType.PLUS_PLUS) {
-            IncMem(name)
+
+      is Symbol -> when (head.type) {
+        SymbolType.WHILE -> {
+          expect(SymbolType.WHILE)
+          val condition = if (headIs(SymbolType.LEFT_PAREN)) {
+            expect(SymbolType.LEFT_PAREN)
+            val c = readCondition()
+            expect(SymbolType.RIGHT_PAREN)
+            c
           } else {
-            DecMem(name)
+            null
           }
-        } else {
-          if (operator == SymbolType.PLUS_PLUS) {
-            IncVar(name)
+          val body = readBracedExprList()
+          While(condition, body)
+        }
+
+        SymbolType.IF -> {
+          expect(SymbolType.IF)
+          expect(SymbolType.LEFT_PAREN)
+          val condition = readCondition()
+            ?: throw ParseException(position, "if without condition")
+          expect(SymbolType.RIGHT_PAREN)
+          val trueBody = readBracedExprList()
+          val falseBody = if (headIs(SymbolType.ELSE)) {
+            expect(SymbolType.ELSE)
+            readBracedExprList()
           } else {
-            DecVar(name)
+            emptyList()
+          }
+          If(condition, trueBody, falseBody)
+        }
+
+        SymbolType.INBOX -> {
+          expect(SymbolType.INBOX)
+          expect(SymbolType.LEFT_PAREN)
+          expect(SymbolType.RIGHT_PAREN)
+          Inbox
+        }
+
+        SymbolType.OUTBOX -> {
+          expect(SymbolType.OUTBOX)
+          expect(SymbolType.LEFT_PAREN)
+          val operand = readExpr()
+          expect(SymbolType.RIGHT_PAREN)
+          Outbox(operand)
+        }
+
+        SymbolType.LEFT_PAREN -> {
+          expect(SymbolType.LEFT_PAREN)
+          val expr = readExpr()
+          expect(SymbolType.RIGHT_PAREN)
+          expr
+        }
+
+        SymbolType.STAR -> {
+          val name = readLval().first
+          if (headIs(SymbolType.EQUAL)) {
+            expect(SymbolType.EQUAL)
+            val right = readExpr()
+            WriteMem(name, right)
+          } else {
+            ReadMem(name)
           }
         }
-      }
-      ?: throw ParseException(position)
-  }
 
-  private fun readCondition(): Compare? {
-    return withMark {
-      val left = readExpr()
-      val operator = expect(
+        SymbolType.PLUS_PLUS,
+        SymbolType.MINUS_MINUS -> {
+          val operator = expect(SymbolType.PLUS_PLUS, SymbolType.MINUS_MINUS)
+          val (name, isDereference) = readLval()
+          if (isDereference) {
+            if (operator == SymbolType.PLUS_PLUS) {
+              IncMem(name)
+            } else {
+              DecMem(name)
+            }
+          } else {
+            if (operator == SymbolType.PLUS_PLUS) {
+              IncVar(name)
+            } else {
+              DecVar(name)
+            }
+          }
+        }
+
+        SymbolType.BREAK -> {
+          position++
+          Break
+        }
+        SymbolType.CONTINUE -> {
+          position++
+          Continue
+        }
+        SymbolType.RETURN -> {
+          position++
+          Terminate
+        }
+
+        SymbolType.RIGHT_PAREN,
+        SymbolType.LEFT_BRACE,
+        SymbolType.RIGHT_BRACE,
+        SymbolType.ELSE,
+        SymbolType.EQUAL,
         SymbolType.EQUAL_EQUAL,
         SymbolType.NOT_EQUAL,
         SymbolType.LESS_THAN,
-        SymbolType.LESS_OR_EQUAL,
         SymbolType.GREATER_THAN,
-        SymbolType.GREATER_OR_EQUAL
-      )
-      val right = readExpr()
-      Compare(symbolToCompareOp(operator), left, right)
+        SymbolType.LESS_OR_EQUAL,
+        SymbolType.GREATER_OR_EQUAL,
+        SymbolType.PLUS,
+        SymbolType.MINUS -> throw ParseException(position, "Unexpected token $head")
+      }
     }
   }
 
+  private fun readCondition(): Compare? {
+    val left = readExpr()
+    val operator = expect(
+      SymbolType.EQUAL_EQUAL,
+      SymbolType.NOT_EQUAL,
+      SymbolType.LESS_THAN,
+      SymbolType.LESS_OR_EQUAL,
+      SymbolType.GREATER_THAN,
+      SymbolType.GREATER_OR_EQUAL
+    )
+    val right = readExpr()
+    return Compare(symbolToCompareOp(operator), left, right)
+  }
+
   private fun readLval(): Pair<String, Boolean> {
-    return withMark {
+    val dereference = if (headIs(SymbolType.STAR)) {
       expect(SymbolType.STAR)
-      Pair(readIdent(), true)
+      true
+    } else {
+      false
     }
-      ?: withMark {
-        Pair(readIdent(), false)
-      }
-      ?: throw ParseException(position)
+
+    val ident = readIdent()
+    return Pair(ident, dereference)
   }
 
   private fun readIdent(): String {
@@ -262,7 +274,7 @@ class Parser(private val tokens: List<Token>) {
       position++
       return (tokens[position - 1] as Identifier).name
     } else {
-      throw ParseException(position)
+      throw ParseException(position, "Expected identifier; found ${tokens[position]}")
     }
   }
 
