@@ -149,7 +149,6 @@ class Parser(private val tokens: List<Token>) {
           expect(SymbolType.IF)
           expect(SymbolType.LEFT_PAREN)
           val condition = readCondition()
-            ?: throw ParseException(position, "if without condition")
           expect(SymbolType.RIGHT_PAREN)
           val trueBody = readBracedExprList()
           val falseBody = if (headIs(SymbolType.ELSE)) {
@@ -243,18 +242,23 @@ class Parser(private val tokens: List<Token>) {
     }
   }
 
-  private fun readCondition(): Compare? {
+  private fun readCondition(): Compare {
     val left = readExpr()
-    val operator = expect(
-      SymbolType.EQUAL_EQUAL,
-      SymbolType.NOT_EQUAL,
-      SymbolType.LESS_THAN,
-      SymbolType.LESS_OR_EQUAL,
-      SymbolType.GREATER_THAN,
-      SymbolType.GREATER_OR_EQUAL
-    )
+    val compareOp = (tokens[position] as? Symbol)?.let {
+      when (it.type) {
+        SymbolType.EQUAL_EQUAL -> CompareOp.Equal
+        SymbolType.NOT_EQUAL -> CompareOp.NotEqual
+        SymbolType.LESS_THAN -> CompareOp.LessThan
+        SymbolType.LESS_OR_EQUAL -> CompareOp.LessOrEqual
+        SymbolType.GREATER_THAN -> CompareOp.GreaterThan
+        SymbolType.GREATER_OR_EQUAL -> CompareOp.GreaterOrEqual
+        else -> throw ParseException(position, "Invalid comparison operator $it")
+      }
+    } ?: throw ParseException(position, "Invalid comparison operator ${tokens[position]}")
+
+    position++
     val right = readExpr()
-    return Compare(symbolToCompareOp(operator), left, right)
+    return Compare(compareOp, left, right)
   }
 
   private fun readLval(): Pair<String, Boolean> {
@@ -275,18 +279,6 @@ class Parser(private val tokens: List<Token>) {
       return (tokens[position - 1] as Identifier).name
     } else {
       throw ParseException(position, "Expected identifier; found ${tokens[position]}")
-    }
-  }
-
-  private fun symbolToCompareOp(symbolType: SymbolType): CompareOp {
-    return when (symbolType) {
-      SymbolType.EQUAL_EQUAL -> CompareOp.Equal
-      SymbolType.NOT_EQUAL -> CompareOp.NotEqual
-      SymbolType.LESS_THAN -> CompareOp.LessThan
-      SymbolType.LESS_OR_EQUAL -> CompareOp.LessOrEqual
-      SymbolType.GREATER_THAN -> CompareOp.GreaterThan
-      SymbolType.GREATER_OR_EQUAL -> CompareOp.GreaterOrEqual
-      else -> throw RuntimeException("Can't convert symbol $symbolType")
     }
   }
 }
