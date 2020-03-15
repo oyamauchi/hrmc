@@ -29,6 +29,7 @@ fun lex(text: String): List<Token> {
     "else\\b".toRegex() to { _ -> Symbol(SymbolType.ELSE) },
     "return\\b".toRegex() to { _ -> Symbol(SymbolType.RETURN) },
     "break\\b".toRegex() to { _ -> Symbol(SymbolType.BREAK) },
+    "continue\\b".toRegex() to { _ -> Symbol(SymbolType.CONTINUE) },
 
     "\\d+".toRegex() to { match -> IntToken(match.groupValues[0].toInt()) },
     "'([A-Z])'".toRegex() to { match -> LetterToken(match.groupValues[1][0]) },

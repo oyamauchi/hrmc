@@ -20,6 +20,8 @@ term:
 - while [ LPAREN condition RPAREN ] LBRACE expr-list RBRACE
 - if LPAREN condition RPAREN LBRACE expr-list RBRACE [ else LBRACE expr-list RBRACE ]
 - RETURN
+- BREAK
+- CONTINUE
 - INBOX LPAREN RPAREN
 - OUTBOX LPAREN expr RPAREN
 - lval EQUAL expr
@@ -126,6 +128,7 @@ class Parser(private val tokens: List<Token>) {
         is LetterToken -> LetterConstant(it.value)
         Symbol(SymbolType.RETURN) -> Terminate
         Symbol(SymbolType.BREAK) -> Break
+        Symbol(SymbolType.CONTINUE) -> Continue
         else -> null
       }
     }

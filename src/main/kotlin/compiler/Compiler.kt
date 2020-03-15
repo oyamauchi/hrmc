@@ -23,12 +23,15 @@ class Compiler(
   private val tempSlot: Int = availableSlots.poll()
 
   private val breakLabelStack: Stack<Label> = Stack()
+  private val continueLabelStack: Stack<Label> = Stack()
   private var labelCounter = 'a'
   private val output = mutableListOf<Instruction>()
   private lateinit var terminateLabel: Label
 
   fun compile(program: List<Expression>): List<Instruction> {
     output.clear()
+    breakLabelStack.clear()
+    continueLabelStack.clear()
     labelCounter = 'a'
     terminateLabel = newLabel()
 
@@ -144,17 +147,22 @@ class Compiler(
         val conditionCheck = newLabel()
         val afterLoop = newLabel()
 
-        breakLabelStack.push(afterLoop)
-
         val condition = expr.condition
 
         if (condition == null) {
+          breakLabelStack.push(afterLoop)
+          continueLabelStack.push(loopTop)
           output.add(loopTop)
           expr.body.forEach { visit(it) }
           output.add(Jump(loopTop.n))
           output.add(afterLoop)
+          breakLabelStack.pop()
+          continueLabelStack.pop()
           return
         }
+
+        breakLabelStack.push(afterLoop)
+        continueLabelStack.push(conditionCheck)
 
         val (left, right, testInstr, negate) =
           computeConditionalJump(expr.condition)
@@ -186,6 +194,7 @@ class Compiler(
 
         output.add(afterLoop)
         breakLabelStack.pop()
+        continueLabelStack.pop()
         true
       }
 
@@ -221,6 +230,8 @@ class Compiler(
       Terminate -> output.add(Jump(terminateLabel.n))
 
       Break -> output.add(Jump(breakLabelStack.lastElement().n))
+
+      Continue -> output.add(Jump(continueLabelStack.lastElement().n))
 
       is Add -> visitBinary(expr.left, expr.right) { hrm.Add(it) }
 

@@ -57,6 +57,7 @@ object Terminate : Expression()
 
 object Break: Expression()
 
+object Continue: Expression()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Arithmetic

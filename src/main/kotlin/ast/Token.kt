@@ -23,6 +23,7 @@ enum class SymbolType {
   PLUS,
   MINUS,
   BREAK,
+  CONTINUE,
   RETURN
 }
 
