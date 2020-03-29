@@ -45,9 +45,7 @@ Its syntax broadly resembles C.
     - Conditions are not valid expressions outside of `if` and `while`. E.g. you
       can't do `a = (b == c)`.
 - Arithmetic
-  - `+` and `-` operators are supported. Unlike in most C-like languages,
-    chained expressions like `a + b + c` are not supported; these kinds of
-    expressions have to be parenthesized to make the associativity explicit.
+  - `+` and `-` operators are supported, and are left-associative.
   - `++` and `--` are supported as prefix operators only, with the same
     semantics as C. The operand must be an lvalue.
   - The semantics of addition and subtraction are as defined in the architecture

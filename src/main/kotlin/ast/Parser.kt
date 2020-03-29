@@ -71,8 +71,8 @@ class Parser(private val tokens: List<Token>) {
     return token.type
   }
 
-  private fun headIs(symbolType: SymbolType): Boolean {
-    return position < tokens.size && tokens[position] == Symbol(symbolType)
+  private fun headIs(vararg symbolTypes: SymbolType): Boolean {
+    return position < tokens.size && tokens[position].let { it is Symbol && it.type in symbolTypes}
   }
 
   private fun readBracedExprList(): List<Expression> {
@@ -88,20 +88,19 @@ class Parser(private val tokens: List<Token>) {
   }
 
   private fun readExpr(): Expression {
-    val left = readTerm()
-    return when {
-      headIs(SymbolType.PLUS) -> {
-        expect(SymbolType.PLUS)
-        val right = readTerm()
-        Add(left, right)
+    var left = readTerm()
+
+    while (headIs(SymbolType.PLUS, SymbolType.MINUS)) {
+      val operatorSymbol = expect(SymbolType.PLUS, SymbolType.MINUS)
+      val right = readTerm()
+      left = when (operatorSymbol) {
+        SymbolType.PLUS -> Add(left, right)
+        SymbolType.MINUS -> Subtract(left, right)
+        else -> error("Should not happen")
       }
-      headIs(SymbolType.MINUS) -> {
-        expect(SymbolType.MINUS)
-        val right = readTerm()
-        Subtract(left, right)
-      }
-      else -> left
     }
+
+    return left
   }
 
   private fun readTerm(): Expression {
