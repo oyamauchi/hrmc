@@ -1,5 +1,7 @@
 # hrmc: Human Resource Machine compiler
 
+![Java CI with Gradle](https://github.com/oyamauchi/hrmc/workflows/Java%20CI%20with%20Gradle/badge.svg)
+
 This is a compiler targeting the architecture used in the game
 [Human Resource Machine](https://tomorrowcorporation.com/humanresourcemachine)
 by Tomorrow Corporation.
