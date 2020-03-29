@@ -19,12 +19,15 @@ Its syntax broadly resembles C.
   - Variable names may contain alphabetic characters and underscores.
   - Assignment is done with an equals sign; e.g. `a = inbox()`. An assignment is
     an expression; its value is the value of the RHS, so chained assignment is
-    possible, such as `a = (b = c)`.
+    possible, such as `a = b = c`. This is right-associative; first `c` is
+    assigned to `b`, then to `a`.
   - Variables can be dereferenced using a star before the name. This represents
     an access to the memory location at the index contained in the variable.
   - Variable names and dereferenced variable names are _lvalues_, the only valid
     targets of assignments.
 - Constants
+  - Constants can be integers or letters. Integers are written in decimal, and cannot
+    be negative. Letters are single characters enclosed in single quotes.
   - As in the game, you can't reference arbitrary constants. To use a constant,
     it must be in the constant pool when the program is compiled, which
     corresponds to being preset in memory in a level of the game.
