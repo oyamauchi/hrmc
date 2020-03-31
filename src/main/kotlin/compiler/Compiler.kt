@@ -67,6 +67,8 @@ class Compiler(
         visit(right)
         Dereference(getVarSlot(right.address))
       }
+      is IntConstant -> FixedAddr(constantPool[IntValue(right.value)]!!)
+      is LetterConstant -> FixedAddr(constantPool[LetterValue(right.value)]!!)
 
       else -> {
         visit(right)
