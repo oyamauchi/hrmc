@@ -5,12 +5,11 @@ start:
 - expr*
 
 braced-expr-list
-- LBRACE RBRACE
 - LBRACE expr* RBRACE
 
 expr:
-- term PLUS term
-- term MINUS term
+- expr PLUS term
+- expr MINUS term
 - term
 
 term:
@@ -39,7 +38,6 @@ condition:
 - expr LESS_OR_EQUAL expr
 - expr GREATER_THAN expr
 - expr GREATER_OR_EQUAL expr
-
  */
 class Parser(private val tokens: List<Token>) {
   private var position = 0
