@@ -20,7 +20,6 @@ class Compiler(
   private val availableSlots: Queue<Int> =
     LinkedList((memorySize - 1 downTo 0) - constantPool.values)
   private val variableMap: MutableMap<String, Int> = mutableMapOf()
-  private val tempSlot: Int = availableSlots.poll()
 
   private val breakLabelStack: Stack<Label> = Stack()
   private val continueLabelStack: Stack<Label> = Stack()
@@ -56,6 +55,7 @@ class Compiler(
     right: Expression,
     combiner: (MemRef) -> Instruction
   ): Boolean {
+    var tempSlot: Int? = null
     val rightSlot: MemRef = when (right) {
       is ReadVar -> FixedAddr(getVarSlot(right.variable))
       is ReadMem -> Dereference(getVarSlot(right.address))
@@ -72,13 +72,20 @@ class Compiler(
 
       else -> {
         visit(right)
+        tempSlot = availableSlots.poll()
         output.add(CopyTo(tempSlot))
         FixedAddr(tempSlot)
       }
     }
 
     visit(left)
-    return output.add(combiner(rightSlot))
+    output.add(combiner(rightSlot))
+
+    tempSlot?.let {
+      availableSlots.offer(it)
+    }
+
+    return true
   }
 
   private fun computeConditionalJump(condition: Compare): CondJump {

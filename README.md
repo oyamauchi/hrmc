@@ -49,12 +49,14 @@ Its syntax broadly resembles C.
       operators `==`, `!=`, `<`, `>`, `<=`, or `>=`.
     - Conditions are not valid expressions outside of `if` and `while`. E.g. you
       can't do `a = (b == c)`.
+    - Evaluation order of conditions is undefined.
 - Arithmetic
   - `+` and `-` operators are supported, and are left-associative.
   - `++` and `--` are supported as prefix operators only, with the same
     semantics as C. The operand must be an lvalue.
   - The semantics of addition and subtraction are as defined in the architecture
     section.
+  - Evaluation order of arithmetic expressions is undefined.
 - Inbox and outbox
   - Read from the inbox with `inbox()`.
   - Write to the outbox with `outbox(value)`. This expression has no value.
