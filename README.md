@@ -6,6 +6,18 @@ This is a compiler targeting the architecture used in the game
 [Human Resource Machine](https://tomorrowcorporation.com/humanresourcemachine)
 by Tomorrow Corporation.
 
+## Build & Run
+
+```
+./gradlew fatJar
+java -jar build/libs/hrmc-1.0-SNAPSHOT-all.jar <args>
+```
+
+Run with `--help` to see usage.
+
+The output (minus the stuff printed by `--print-tree` and `--execute`) can be
+copy-pasted into Human Resource Machine.
+
 ## Source Language
 
 The source language is small, constrained by the design of the target machine.

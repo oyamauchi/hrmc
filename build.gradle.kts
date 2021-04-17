@@ -30,7 +30,7 @@ tasks {
  */
 task<Jar>("fatJar") {
     manifest {
-        attributes("Main-Class" to "MainKt")
+        attributes("Main-Class" to "Main")
     }
     archiveClassifier.set("all")
     from(configurations.runtimeClasspath.get().files.map {

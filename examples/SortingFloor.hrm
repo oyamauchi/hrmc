@@ -1,0 +1,35 @@
+// MEMORYSIZE 25
+// PRESETS 24=0
+
+// The number of elements stored.
+total = 0
+
+while {
+  while ((curr = inbox()) != 0) {
+    // Insertion sort. Keep the elements seen so far in ascending order
+    // starting at index 0. Iterate backwards from highest to lowest;
+    // if the element is greater than "curr", copy it upwards one slot.
+    // If the element is less than or equal to "curr", stop iterating,
+    // and write "curr" into the next highest slot.
+    other = (index = total)
+    --other
+    while (other >= 0) {
+      if (curr > *other) {
+        *index = *other
+      } else {
+        break
+      }
+      --other
+      --index
+    }
+    *index = curr
+    ++total
+  }
+
+  // Output the sorted result.
+  // This naturally resets the state to total = 0.
+  while (total != 0) {
+    --total
+    outbox(*total)
+  }
+}
