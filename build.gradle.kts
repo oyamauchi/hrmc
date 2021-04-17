@@ -24,3 +24,17 @@ tasks {
         kotlinOptions.jvmTarget = "1.8"
     }
 }
+
+/**
+ * Custom task to create a jar with all dependencies included.
+ */
+task<Jar>("fatJar") {
+    manifest {
+        attributes("Main-Class" to "MainKt")
+    }
+    archiveClassifier.set("all")
+    from(configurations.runtimeClasspath.get().files.map {
+        if (it.isDirectory) it else zipTree(it)
+    })
+    with(tasks.jar.get())
+}
