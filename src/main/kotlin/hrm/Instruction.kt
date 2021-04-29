@@ -51,7 +51,7 @@ data class BumpUp(
 data class BumpDown(
   val operand: MemRef
 ) : Instruction() {
-  override fun toString() = "    BUMPDOWN $operand"
+  override fun toString() = "    BUMPDN   $operand"
 }
 
 data class Label(
