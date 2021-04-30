@@ -40,9 +40,13 @@ class Compiler(
     return output.toList()
   }
 
-  private fun getVarSlot(variable: String): Int {
-    return variableMap.computeIfAbsent(variable) {
-      availableSlots.poll() ?: error("Could not allocate enough variables")
+  private fun getVarSlot(variable: String, create: Boolean = false): Int {
+    return if (create) {
+      variableMap.computeIfAbsent(variable) {
+        availableSlots.poll() ?: error("Could not allocate enough variables")
+      }
+    } else {
+      variableMap[variable] ?: error("Variable $variable not defined before use")
     }
   }
 
@@ -134,7 +138,7 @@ class Compiler(
       is ReadVar -> output.add(CopyFrom(getVarSlot(expr.variable)))
       is AssignVar -> {
         visit(expr.value)
-        output.add(CopyTo(getVarSlot(expr.variable)))
+        output.add(CopyTo(getVarSlot(expr.variable, create = true)))
       }
 
       is ReadMem -> output.add(CopyFrom(Dereference(getVarSlot(expr.address))))
