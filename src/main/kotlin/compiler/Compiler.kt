@@ -46,6 +46,10 @@ class Compiler(
     }
   }
 
+  private fun getConstSlot(value: Value): Int {
+    return constantPool[value] ?: error("$value is not in presets")
+  }
+
   private fun newLabel(): Label {
     return Label(labelCounter++)
   }
@@ -67,8 +71,8 @@ class Compiler(
         visit(right)
         Dereference(getVarSlot(right.address))
       }
-      is IntConstant -> FixedAddr(constantPool[IntValue(right.value)]!!)
-      is LetterConstant -> FixedAddr(constantPool[LetterValue(right.value)]!!)
+      is IntConstant -> FixedAddr(getConstSlot(IntValue(right.value)))
+      is LetterConstant -> FixedAddr(getConstSlot(LetterValue(right.value)))
 
       else -> {
         visit(right)
@@ -141,13 +145,13 @@ class Compiler(
 
       is IntConstant -> {
         val value = IntValue(expr.value)
-        val slot = constantPool[value]!!
+        val slot = getConstSlot(value)
         output.add(CopyFrom(slot))
       }
 
       is LetterConstant -> {
         val value = LetterValue(expr.value)
-        val slot = constantPool[value]!!
+        val slot = getConstSlot(value)
         output.add(CopyFrom(slot))
       }
 

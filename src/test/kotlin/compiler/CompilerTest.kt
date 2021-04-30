@@ -2,12 +2,14 @@ package compiler
 
 import ast.Add
 import ast.Inbox
+import ast.IntConstant
 import ast.Outbox
 import hrm.CopyTo
 import hrm.FixedAddr
 import hrm.Label
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class CompilerTest {
   @Test
@@ -32,5 +34,13 @@ class CompilerTest {
       ),
       compiled.filter { it !is Label }
     )
+  }
+
+  @Test
+  fun `nonexistent constant`() {
+    val program = listOf(Outbox(IntConstant(123)))
+    val compiler = Compiler(emptyMap(), 10)
+    val exc = assertFailsWith<IllegalStateException> { compiler.compile(program) }
+    assertEquals("IntValue(n=123) is not in presets", exc.message)
   }
 }
