@@ -29,9 +29,11 @@ class JumpOptimizer(
     var changed = false
     program.forEachIndexed { index, instr ->
       if (instr is HasTargetLabel) {
-        val targetIndex = indexOf(instr.labelN)
-        if (targetIndex + 1 < program.size && program[targetIndex + 1] is Jump) {
-          val targetOfTarget = (program[targetIndex + 1] as Jump).labelN
+        val targetIndex = indexOfFirstNonLabelAfter(indexOf(instr.labelN))
+
+        // Don't do this for self-jumps; that will cause an infinite loop
+        if (targetIndex != null && targetIndex != index && program[targetIndex] is Jump) {
+          val targetOfTarget = (program[targetIndex] as Jump).labelN
           program[index] = instr.withNewTarget(targetOfTarget)
           changed = true
         }
@@ -44,8 +46,9 @@ class JumpOptimizer(
   private fun removeJumpsToNext(): Boolean {
     return removeMatching { index, instr ->
       if (instr is HasTargetLabel) {
-        val targetIndex = indexOf(instr.labelN)
-        targetIndex == index + 1
+        val targetIndex = indexOfFirstNonLabelAfter(indexOf(instr.labelN))
+        val nextIndex = indexOfFirstNonLabelAfter(index)
+        targetIndex == nextIndex
       } else {
         false
       }
@@ -89,5 +92,14 @@ class JumpOptimizer(
 
   private fun indexOf(labelN: Char): Int {
     return program.indexOf(Label(labelN))
+  }
+
+  private fun indexOfFirstNonLabelAfter(index: Int): Int? {
+    val result = program.drop(index + 1).indexOfFirst { it !is Label }
+    return if (result == -1) {
+      null
+    } else {
+      result + index + 1
+    }
   }
 }
