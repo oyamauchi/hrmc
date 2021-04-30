@@ -27,9 +27,15 @@ enum class SymbolType {
   RETURN
 }
 
-sealed class Token
+data class Position(
+  val line: Int, val column: Int
+)
 
-data class Symbol(val type: SymbolType): Token()
-data class Identifier(val name: String): Token()
-data class IntToken(val value: Int): Token()
-data class LetterToken(val value: Char): Token()
+sealed class Token {
+  abstract val position: Position
+}
+
+data class Symbol(val type: SymbolType, override val position: Position): Token()
+data class Identifier(val name: String, override val position: Position): Token()
+data class IntToken(val value: Int, override val position: Position): Token()
+data class LetterToken(val value: Char, override val position: Position): Token()

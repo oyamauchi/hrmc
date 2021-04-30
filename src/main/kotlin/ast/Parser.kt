@@ -51,18 +51,18 @@ class Parser(private val tokens: List<Token>) {
   }
 
   private class ParseException(
-    position: Int,
+    position: Position?,
     message: String
-  ) : RuntimeException("Parse error at token $position: $message")
+  ) : RuntimeException("Parse error${position?.let { " at line ${it.line}, column ${it.column}"} ?: ""}: $message")
 
   private fun expect(vararg symbolTypes: SymbolType): SymbolType {
     if (position >= tokens.size) {
-      throw ParseException(position, "Unexpected end of input")
+      throw ParseException(null, "Unexpected end of input")
     }
 
     val token = tokens[position]
     if (token !is Symbol || token.type !in symbolTypes) {
-      throw ParseException(position, "Expected ${symbolTypes.toList()}; found $token")
+      throw ParseException(token.position, "Expected ${symbolTypes.toList()}; found $token")
     }
 
     position++
@@ -103,7 +103,7 @@ class Parser(private val tokens: List<Token>) {
 
   private fun readTerm(): Expression {
     if (position >= tokens.size) {
-      throw ParseException(position, "Unexpected end of input")
+      throw ParseException(null, "Unexpected end of input")
     }
 
     return when (val head = tokens[position]) {
@@ -234,7 +234,7 @@ class Parser(private val tokens: List<Token>) {
         SymbolType.LESS_OR_EQUAL,
         SymbolType.GREATER_OR_EQUAL,
         SymbolType.PLUS,
-        SymbolType.MINUS -> throw ParseException(position, "Unexpected token $head")
+        SymbolType.MINUS -> throw ParseException(head.position, "Unexpected token $head")
       }
     }
   }
@@ -249,9 +249,9 @@ class Parser(private val tokens: List<Token>) {
         SymbolType.LESS_OR_EQUAL -> CompareOp.LessOrEqual
         SymbolType.GREATER_THAN -> CompareOp.GreaterThan
         SymbolType.GREATER_OR_EQUAL -> CompareOp.GreaterOrEqual
-        else -> throw ParseException(position, "Invalid comparison operator $it")
+        else -> throw ParseException(it.position, "Invalid comparison operator $it")
       }
-    } ?: throw ParseException(position, "Invalid comparison operator ${tokens[position]}")
+    } ?: throw ParseException(tokens[position].position, "Invalid comparison operator ${tokens[position]}")
 
     position++
     val right = readExpr()
@@ -275,7 +275,7 @@ class Parser(private val tokens: List<Token>) {
       position++
       return (tokens[position - 1] as Identifier).name
     } else {
-      throw ParseException(position, "Expected identifier; found ${tokens[position]}")
+      throw ParseException(tokens[position].position, "Expected identifier; found ${tokens[position]}")
     }
   }
 }

@@ -4,18 +4,20 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class ParserTest {
+  private val POSITION = Position(1, 1)
+
   @Test
   fun `chained arithmetic`() {
     val tokens = listOf(
-      Identifier("a"),
-      Symbol(SymbolType.PLUS),
-      Identifier("b"),
-      Symbol(SymbolType.MINUS),
-      Identifier("c"),
-      Symbol(SymbolType.MINUS),
-      Identifier("d"),
-      Symbol(SymbolType.MINUS),
-      Identifier("e")
+      Identifier("a", POSITION),
+      Symbol(SymbolType.PLUS, POSITION),
+      Identifier("b", POSITION),
+      Symbol(SymbolType.MINUS, POSITION),
+      Identifier("c", POSITION),
+      Symbol(SymbolType.MINUS, POSITION),
+      Identifier("d", POSITION),
+      Symbol(SymbolType.MINUS, POSITION),
+      Identifier("e", POSITION)
     )
 
     assertEquals(
@@ -41,13 +43,13 @@ class ParserTest {
   @Test
   fun `chained arithmetic on RHS of assignment`() {
     val tokens = listOf(
-      Identifier("a"),
-      Symbol(SymbolType.EQUAL),
-      Identifier("b"),
-      Symbol(SymbolType.MINUS),
-      Identifier("c"),
-      Symbol(SymbolType.PLUS),
-      Identifier("d")
+      Identifier("a", POSITION),
+      Symbol(SymbolType.EQUAL, POSITION),
+      Identifier("b", POSITION),
+      Symbol(SymbolType.MINUS, POSITION),
+      Identifier("c", POSITION),
+      Symbol(SymbolType.PLUS, POSITION),
+      Identifier("d", POSITION)
     )
 
     assertEquals(

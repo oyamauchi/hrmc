@@ -8,6 +8,7 @@ import hrm.Machine
 import hrm.Value
 import hrm.render
 import java.io.File
+import kotlin.system.exitProcess
 
 object Main {
   private val INT_REGEX = "0|-?[1-9]\\d*".toRegex()
@@ -113,9 +114,14 @@ object Main {
   fun main(argsArray: Array<String>) {
     val args = parseArgs(argsArray) ?: return
 
-    val tokens = lex(args.programText)
-    val parser = Parser(tokens)
-    val tree = parser.parse()
+    val tree = try {
+      val tokens = lex(args.programText)
+      val parser = Parser(tokens)
+      parser.parse()
+    } catch (exc: RuntimeException) {
+      println(exc.message)
+      exitProcess(1)
+    }
 
     if (args.printTree) {
       println(tree)
