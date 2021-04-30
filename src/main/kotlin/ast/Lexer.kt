@@ -23,6 +23,8 @@ fun lex(text: String): List<Token> {
     "--".toRegex() to { _, p -> Symbol(SymbolType.MINUS_MINUS, p) },
     "\\+".toRegex() to { _, p -> Symbol(SymbolType.PLUS, p) },
     "-".toRegex() to { _, p -> Symbol(SymbolType.MINUS, p) },
+    "&&".toRegex() to { _, p -> Symbol(SymbolType.LOGICAL_AND, p) },
+    "\\|\\|".toRegex() to { _, p -> Symbol(SymbolType.LOGICAL_OR, p) },
 
     "inbox\\b".toRegex() to { _, p -> Symbol(SymbolType.INBOX, p) },
     "outbox\\b".toRegex() to { _, p -> Symbol(SymbolType.OUTBOX, p) },

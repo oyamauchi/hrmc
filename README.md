@@ -57,11 +57,14 @@ Its syntax broadly resembles C.
     `if` and `else` bodies are required. In particular, that means plain
     `else if` is not possible; it has to be written as `else { if ... }`.
   - Conditions
-    - Conditions must be two expressions separated by one of the comparison
+    - A condition can be logical AND (`&&`), logical OR (`||`), or a comparision.
+      The logical operators evaluate left-to-right, and are short-circuiting.
+      They're left-associative, and `&&` binds tighter than `||`.
+    - Comparisons must be two expressions separated by one of the comparison
       operators `==`, `!=`, `<`, `>`, `<=`, or `>=`.
     - Conditions are not valid expressions outside of `if` and `while`. E.g. you
       can't do `a = (b == c)`.
-    - Evaluation order of conditions is undefined.
+    - Evaluation order within comparisons is undefined.
 - Arithmetic
   - `+` and `-` operators are supported, and are left-associative.
   - `++` and `--` are supported as prefix operators only, with the same

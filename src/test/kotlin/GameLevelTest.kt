@@ -57,22 +57,13 @@ class GameLevelTest(private val testCase: TestCase) {
         """
           while {
             curr = inbox()
-            if (curr == 'A') {
-              continue
+            if (curr != 'A' &&
+                curr != 'E' &&
+                curr != 'I' &&
+                curr != 'O' &&
+                curr != 'U') {
+              outbox(curr)
             }
-            if (curr == 'E') {
-              continue
-            }
-            if (curr == 'I') {
-              continue
-            }
-            if (curr == 'O') {
-              continue
-            }
-            if (curr == 'U') {
-              continue
-            }
-            outbox(curr)
           }
         """.trimIndent(),
         mapOf(

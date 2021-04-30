@@ -96,6 +96,41 @@ class Compiler(
     return true
   }
 
+  private fun visitCondition(condition: Condition, trueLabel: Label, falseLabel: Label) {
+    return when (condition) {
+      is AndCondition -> {
+        val rhsLabel = newLabel()
+        visitCondition(condition.left, rhsLabel, falseLabel)
+        output.add(rhsLabel)
+        visitCondition(condition.right, trueLabel, falseLabel)
+      }
+      is OrCondition -> {
+        val rhsLabel = newLabel()
+        visitCondition(condition.left, trueLabel, rhsLabel)
+        output.add(rhsLabel)
+        visitCondition(condition.right, trueLabel, falseLabel)
+      }
+      is Compare -> {
+        val (left, right, testInstr, negate) = computeConditionalJump(condition)
+
+        if (right == IntConstant(0)) {
+          visit(left)
+        } else {
+          visitBinary(left, right) { Sub(it) }
+        }
+
+        if (negate) {
+          output.add(testInstr(falseLabel))
+          output.add(Jump(trueLabel.n))
+        } else {
+          output.add(testInstr(trueLabel))
+          output.add(Jump(falseLabel.n))
+        }
+        Unit
+      }
+    }
+  }
+
   private fun computeConditionalJump(condition: Compare): CondJump {
     return when (condition.operator) {
       CompareOp.Equal -> CondJump(condition.left, condition.right, { JumpIfZero(it.n) }, false)
@@ -181,65 +216,29 @@ class Compiler(
         breakLabelStack.push(afterLoop)
         continueLabelStack.push(conditionCheck)
 
-        val (left, right, testInstr, negate) =
-          computeConditionalJump(expr.condition)
-
-        val rightIsZero = right == IntConstant(0)
-
-        if (negate) {
-          output.add(conditionCheck)
-          if (rightIsZero) {
-            visit(left)
-          } else {
-            visitBinary(left, right) { Sub(it) }
-          }
-          output.add(testInstr(afterLoop))
-          expr.body.forEach { visit(it) }
-          output.add(Jump(conditionCheck.n))
-        } else {
-          output.add(Jump(conditionCheck.n))
-          output.add(loopTop)
-          expr.body.forEach { visit(it) }
-          output.add(conditionCheck)
-          if (rightIsZero) {
-            visit(left)
-          } else {
-            visitBinary(left, right) { Sub(it) }
-          }
-          output.add(testInstr(loopTop))
-        }
-
+        output.add(conditionCheck)
+        visitCondition(expr.condition, loopTop, afterLoop)
+        output.add(loopTop)
+        expr.body.forEach { visit(it) }
+        output.add(Jump(conditionCheck.n))
         output.add(afterLoop)
+
         breakLabelStack.pop()
         continueLabelStack.pop()
         true
       }
 
       is If -> {
-        val secondBlockLabel = newLabel()
+        val trueLabel = newLabel()
+        val falseLabel = newLabel()
         val after = newLabel()
 
-        val (left, right, testInstr, negate) = computeConditionalJump(expr.condition)
-
-        if (right != IntConstant(0)) {
-          visitBinary(left, right) { Sub(it) }
-        } else {
-          visit(left)
-        }
-
-        output.add(testInstr(secondBlockLabel))
-
-        if (negate) {
-          expr.trueBody.forEach { visit(it) }
-          output.add(Jump(after.n))
-          output.add(secondBlockLabel)
-          expr.falseBody.forEach { visit(it) }
-        } else {
-          expr.falseBody.forEach { visit(it) }
-          output.add(Jump(after.n))
-          output.add(secondBlockLabel)
-          expr.trueBody.forEach { visit(it) }
-        }
+        visitCondition(expr.condition, trueLabel, falseLabel)
+        output.add(trueLabel)
+        expr.trueBody.forEach { visit(it) }
+        output.add(Jump(after.n))
+        output.add(falseLabel)
+        expr.falseBody.forEach { visit(it) }
 
         output.add(after)
       }

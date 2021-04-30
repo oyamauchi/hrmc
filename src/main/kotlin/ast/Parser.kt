@@ -16,8 +16,8 @@ term:
 - letter
 - int
 - LPAREN expr RPAREN
-- while [ LPAREN condition RPAREN ] braced-expr-list
-- if LPAREN condition RPAREN braced-expr-list [ else braced-expr-list ]
+- while [ LPAREN or-condition RPAREN ] braced-expr-list
+- if LPAREN or-condition RPAREN braced-expr-list [ else braced-expr-list ]
 - RETURN
 - BREAK
 - CONTINUE
@@ -30,6 +30,14 @@ term:
 lval:
 - IDENT
 - STAR IDENT
+
+or-condition:
+- and-condition
+- or-condition LOGICAL_OR and-condition
+
+and-condition:
+- condition
+- and-condition LOGICAL_AND condition
 
 condition:
 - expr EQUAL_EQUAL expr
@@ -132,7 +140,7 @@ class Parser(private val tokens: List<Token>) {
           expect(SymbolType.WHILE)
           val condition = if (headIs(SymbolType.LEFT_PAREN)) {
             expect(SymbolType.LEFT_PAREN)
-            val c = readCondition()
+            val c = readOrCondition()
             expect(SymbolType.RIGHT_PAREN)
             c
           } else {
@@ -145,7 +153,7 @@ class Parser(private val tokens: List<Token>) {
         SymbolType.IF -> {
           expect(SymbolType.IF)
           expect(SymbolType.LEFT_PAREN)
-          val condition = readCondition()
+          val condition = readOrCondition()
           expect(SymbolType.RIGHT_PAREN)
           val trueBody = readBracedExprList()
           val falseBody = if (headIs(SymbolType.ELSE)) {
@@ -233,10 +241,36 @@ class Parser(private val tokens: List<Token>) {
         SymbolType.GREATER_THAN,
         SymbolType.LESS_OR_EQUAL,
         SymbolType.GREATER_OR_EQUAL,
+        SymbolType.LOGICAL_AND,
+        SymbolType.LOGICAL_OR,
         SymbolType.PLUS,
         SymbolType.MINUS -> throw ParseException(head.position, "Unexpected token $head")
       }
     }
+  }
+
+  private fun readOrCondition(): Condition {
+    var left = readAndCondition()
+
+    while (headIs(SymbolType.LOGICAL_OR)) {
+      expect(SymbolType.LOGICAL_OR)
+      val right = readAndCondition()
+      left = OrCondition(left, right)
+    }
+
+    return left
+  }
+
+  private fun readAndCondition(): Condition {
+    var left: Condition = readCondition()
+
+    while (headIs(SymbolType.LOGICAL_AND)) {
+      expect(SymbolType.LOGICAL_AND)
+      val right = readCondition()
+      left = AndCondition(left, right)
+    }
+
+    return left
   }
 
   private fun readCondition(): Compare {
