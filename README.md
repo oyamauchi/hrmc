@@ -8,6 +8,8 @@ by Tomorrow Corporation.
 
 ## Build & Run
 
+Requires Java 8 or later.
+
 ```
 ./gradlew fatJar
 java -jar build/libs/hrmc-1.0-SNAPSHOT-all.jar <args>
@@ -40,8 +42,8 @@ Its syntax broadly resembles C.
   - Variable names and dereferenced variable names are _lvalues_, the only valid
     targets of assignments.
 - Constants
-  - Constants can be integers or letters. Integers are written in decimal, and cannot
-    be negative. Letters are single characters enclosed in single quotes.
+  - Constants can be integers or letters. Integers are written in decimal, and
+    cannot be negative. Letters are single characters enclosed in single quotes.
   - As in the game, you can't reference arbitrary constants. To use a constant,
     it must be in the constant pool when the program is compiled, which
     corresponds to being preset in memory in a level of the game.
@@ -57,9 +59,10 @@ Its syntax broadly resembles C.
     `if` and `else` bodies are required. In particular, that means plain
     `else if` is not possible; it has to be written as `else { if ... }`.
   - Conditions
-    - A condition can be logical AND (`&&`), logical OR (`||`), or a comparision.
-      The logical operators evaluate left-to-right, and are short-circuiting.
-      They're left-associative, and `&&` binds tighter than `||`.
+    - A condition can be logical AND (`&&`), logical OR (`||`), or a
+      comparision. The logical operators evaluate left-to-right, and are
+      short-circuiting. They're left-associative, and `&&` binds tighter than
+      `||`.
     - Comparisons must be two expressions separated by one of the comparison
       operators `==`, `!=`, `<`, `>`, `<=`, or `>=`.
     - Conditions are not valid expressions outside of `if` and `while`. E.g. you
@@ -75,6 +78,22 @@ Its syntax broadly resembles C.
 - Inbox and outbox
   - Read from the inbox with `inbox()`.
   - Write to the outbox with `outbox(value)`. This expression has no value.
+
+## Compilation
+
+The output HRM code is not highly optimized, and tends to contain some obvious
+inefficiencies. The most glaring problem is redundant loads: the compiler does
+not track which value it currently has in the register, and it emits a load for
+every read from a variable.
+
+The only real "optimization" applied is a set of very basic transformations on
+jump instructions, cleaning up some of the most obvious nonsense (like jumps to
+the next instruction).
+
+For most game levels, the most straightforward source code does not produce
+output that beats the game's optimization challenges. There are some exceptions,
+though, and several more levels where a small amount of manual tweaking of the
+output can beat the challenges.
 
 ## Target Architecture
 
@@ -95,8 +114,7 @@ but some levels of the game have values pre-populated.
 Execution terminates either:
 
 - When an `Inbox` instruction is executed while the inbox is empty.
-- After the last instruction in the program is executed, as long as that
-  instruction is not a jump, or is a conditional jump that is not taken.
+- When the instruction pointer goes past the end of the program.
 
 ### Values
 
