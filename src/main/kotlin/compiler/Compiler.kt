@@ -131,6 +131,18 @@ class Compiler(
     }
   }
 
+  /**
+   * Computes how to codegen a jump for a comparison. This means which side of the condition to subtract from the other,
+   * which jump instruction to use, and whether to negate the condition (i.e. swap the true and false destinations).
+   *
+   *  CONDITION     CODEGEN
+   *  x == y        if  x - y == 0
+   *  x != y        !if x - y == 0
+   *  x < y         if  x - y < 0
+   *  x <= y        !if y - x < 0
+   *  x > y         if  y - x < 0
+   *  x >= y        !if x - y < 0
+   */
   private fun computeConditionalJump(condition: Compare): CondJump {
     return when (condition.operator) {
       CompareOp.Equal -> CondJump(condition.left, condition.right, { JumpIfZero(it.n) }, false)
