@@ -17,23 +17,26 @@ class ParserTest {
       Symbol(SymbolType.MINUS, POSITION),
       Identifier("d", POSITION),
       Symbol(SymbolType.MINUS, POSITION),
-      Identifier("e", POSITION)
+      Identifier("e", POSITION),
+      Symbol(SymbolType.SEMICOLON, POSITION)
     )
 
     assertEquals(
       listOf(
-        Subtract(
+        ExpressionStatement(
           Subtract(
             Subtract(
-              Add(
-                ReadVar("a"),
-                ReadVar("b")
+              Subtract(
+                Add(
+                  ReadVar("a"),
+                  ReadVar("b")
+                ),
+                ReadVar("c")
               ),
-              ReadVar("c")
+              ReadVar("d")
             ),
-            ReadVar("d")
-          ),
-          ReadVar("e")
+            ReadVar("e")
+          )
         )
       ),
       Parser(tokens).parse()
@@ -49,19 +52,22 @@ class ParserTest {
       Symbol(SymbolType.MINUS, POSITION),
       Identifier("c", POSITION),
       Symbol(SymbolType.PLUS, POSITION),
-      Identifier("d", POSITION)
+      Identifier("d", POSITION),
+      Symbol(SymbolType.SEMICOLON, POSITION)
     )
 
     assertEquals(
       listOf(
-        AssignVar(
-          "a",
-          Add(
-            Subtract(
-              ReadVar("b"),
-              ReadVar("c")
-            ),
-            ReadVar("d")
+        ExpressionStatement(
+          AssignVar(
+            "a",
+            Add(
+              Subtract(
+                ReadVar("b"),
+                ReadVar("c")
+              ),
+              ReadVar("d")
+            )
           )
         )
       ),

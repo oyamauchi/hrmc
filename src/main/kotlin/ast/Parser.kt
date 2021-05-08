@@ -2,10 +2,17 @@ package ast
 
 /*
 start:
-- expr*
+- stmt*
 
-braced-expr-list
-- LBRACE expr* RBRACE
+stmt:
+- OUTBOX LPAREN expr RPAREN SEMICOLON
+- RETURN SEMICOLON
+- BREAK SEMICOLON
+- CONTINUE SEMICOLON
+- while [ LPAREN or-condition RPARENT ] stmt
+- if LPAREN or-condition RPAREN stmt [ else stmt ]
+- LBRACE stmt* RBRACE
+- expr SEMICOLON
 
 expr:
 - expr PLUS term
@@ -16,13 +23,7 @@ term:
 - letter
 - int
 - LPAREN expr RPAREN
-- while [ LPAREN or-condition RPAREN ] braced-expr-list
-- if LPAREN or-condition RPAREN braced-expr-list [ else braced-expr-list ]
-- RETURN
-- BREAK
-- CONTINUE
 - INBOX LPAREN RPAREN
-- OUTBOX LPAREN expr RPAREN
 - lval [ EQUAL expr ]
 - PLUS_PLUS lval
 - MINUS_MINUS lval
@@ -50,10 +51,10 @@ condition:
 class Parser(private val tokens: List<Token>) {
   private var position = 0
 
-  fun parse(): List<Expression> {
-    val result = mutableListOf<Expression>()
+  fun parse(): List<Statement> {
+    val result = mutableListOf<Statement>()
     while (position < tokens.size) {
-      result.add(readExpr())
+      result.add(readStmt())
     }
     return result
   }
@@ -61,11 +62,11 @@ class Parser(private val tokens: List<Token>) {
   private class ParseException(
     position: Position?,
     message: String
-  ) : RuntimeException("Parse error${position?.let { " at line ${it.line}, column ${it.column}"} ?: ""}: $message")
+  ) : RuntimeException("Parse error${position?.let { " at line ${it.line}, column ${it.column}" } ?: ""}: $message")
 
   private fun expect(vararg symbolTypes: SymbolType): SymbolType {
     if (position >= tokens.size) {
-      throw ParseException(null, "Unexpected end of input")
+      throw ParseException(null, "Expected ${symbolTypes.toList()}; found end of input")
     }
 
     val token = tokens[position]
@@ -78,19 +79,91 @@ class Parser(private val tokens: List<Token>) {
   }
 
   private fun headIs(vararg symbolTypes: SymbolType): Boolean {
-    return position < tokens.size && tokens[position].let { it is Symbol && it.type in symbolTypes}
+    return position < tokens.size && tokens[position].let { it is Symbol && it.type in symbolTypes }
   }
 
-  private fun readBracedExprList(): List<Expression> {
-    expect(SymbolType.LEFT_BRACE)
+  private fun readStmt(): Statement {
+    return when (val head = tokens[position]) {
+      is Symbol -> when (head.type) {
+        SymbolType.LEFT_BRACE -> {
+          position++
+          val statements = mutableListOf<Statement>()
+          while (!headIs(SymbolType.RIGHT_BRACE)) {
+            statements.add(readStmt())
+          }
+          expect(SymbolType.RIGHT_BRACE)
+          StatementList(statements)
+        }
 
-    val result = mutableListOf<Expression>()
-    while (!headIs(SymbolType.RIGHT_BRACE)) {
-      result.add(readExpr())
+        SymbolType.OUTBOX -> {
+          position++
+          expect(SymbolType.LEFT_PAREN)
+          val operand = readExpr()
+          expect(SymbolType.RIGHT_PAREN)
+          expect(SymbolType.SEMICOLON)
+          Outbox(operand)
+        }
+
+        SymbolType.BREAK -> {
+          position++
+          expect(SymbolType.SEMICOLON)
+          Break
+        }
+        SymbolType.CONTINUE -> {
+          position++
+          expect(SymbolType.SEMICOLON)
+          Continue
+        }
+        SymbolType.RETURN -> {
+          position++
+          expect(SymbolType.SEMICOLON)
+          Return
+        }
+
+        SymbolType.IF -> {
+          position++
+          expect(SymbolType.LEFT_PAREN)
+          val condition = readOrCondition()
+          expect(SymbolType.RIGHT_PAREN)
+          val trueBody = readStmt()
+          val falseBody = if (headIs(SymbolType.ELSE)) {
+            position++
+            readStmt()
+          } else {
+            null
+          }
+
+          If(condition, trueBody, falseBody)
+        }
+
+        SymbolType.WHILE -> {
+          position++
+          val condition = if (headIs(SymbolType.LEFT_PAREN)) {
+            expect(SymbolType.LEFT_PAREN)
+            val c = readOrCondition()
+            expect(SymbolType.RIGHT_PAREN)
+            c
+          } else {
+            null
+          }
+          val body = readStmt()
+
+          While(condition, body)
+        }
+
+        else -> {
+          val expr = readExpr()
+          expect(SymbolType.SEMICOLON)
+          ExpressionStatement(expr)
+        }
+      }
+
+      else -> {
+        val expr = readExpr()
+        expect(SymbolType.SEMICOLON)
+        ExpressionStatement(expr)
+      }
     }
-
-    expect(SymbolType.RIGHT_BRACE)
-    return result
   }
 
   private fun readExpr(): Expression {
@@ -136,48 +209,11 @@ class Parser(private val tokens: List<Token>) {
       }
 
       is Symbol -> when (head.type) {
-        SymbolType.WHILE -> {
-          expect(SymbolType.WHILE)
-          val condition = if (headIs(SymbolType.LEFT_PAREN)) {
-            expect(SymbolType.LEFT_PAREN)
-            val c = readOrCondition()
-            expect(SymbolType.RIGHT_PAREN)
-            c
-          } else {
-            null
-          }
-          val body = readBracedExprList()
-          While(condition, body)
-        }
-
-        SymbolType.IF -> {
-          expect(SymbolType.IF)
-          expect(SymbolType.LEFT_PAREN)
-          val condition = readOrCondition()
-          expect(SymbolType.RIGHT_PAREN)
-          val trueBody = readBracedExprList()
-          val falseBody = if (headIs(SymbolType.ELSE)) {
-            expect(SymbolType.ELSE)
-            readBracedExprList()
-          } else {
-            emptyList()
-          }
-          If(condition, trueBody, falseBody)
-        }
-
         SymbolType.INBOX -> {
           expect(SymbolType.INBOX)
           expect(SymbolType.LEFT_PAREN)
           expect(SymbolType.RIGHT_PAREN)
           Inbox
-        }
-
-        SymbolType.OUTBOX -> {
-          expect(SymbolType.OUTBOX)
-          expect(SymbolType.LEFT_PAREN)
-          val operand = readExpr()
-          expect(SymbolType.RIGHT_PAREN)
-          Outbox(operand)
         }
 
         SymbolType.LEFT_PAREN -> {
@@ -217,19 +253,13 @@ class Parser(private val tokens: List<Token>) {
           }
         }
 
-        SymbolType.BREAK -> {
-          position++
-          Break
-        }
-        SymbolType.CONTINUE -> {
-          position++
-          Continue
-        }
-        SymbolType.RETURN -> {
-          position++
-          Terminate
-        }
-
+        SymbolType.SEMICOLON,
+        SymbolType.OUTBOX,
+        SymbolType.BREAK,
+        SymbolType.CONTINUE,
+        SymbolType.RETURN,
+        SymbolType.IF,
+        SymbolType.WHILE,
         SymbolType.RIGHT_PAREN,
         SymbolType.LEFT_BRACE,
         SymbolType.RIGHT_BRACE,
@@ -244,7 +274,7 @@ class Parser(private val tokens: List<Token>) {
         SymbolType.LOGICAL_AND,
         SymbolType.LOGICAL_OR,
         SymbolType.PLUS,
-        SymbolType.MINUS -> throw ParseException(head.position, "Unexpected token $head")
+        SymbolType.MINUS -> throw ParseException(head.position, "Unexpected token ${head.type}")
       }
     }
   }

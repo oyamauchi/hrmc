@@ -27,14 +27,14 @@ class Compiler(
   private val output = mutableListOf<Instruction>()
   private lateinit var terminateLabel: Label
 
-  fun compile(program: List<Expression>): List<Instruction> {
+  fun compile(program: List<Statement>): List<Instruction> {
     output.clear()
     breakLabelStack.clear()
     continueLabelStack.clear()
     labelCounter = 'a'
     terminateLabel = newLabel()
 
-    program.forEach { visit(it) }
+    program.forEach { visitStatement(it) }
     output.add(terminateLabel)
 
     return output.toList()
@@ -174,13 +174,83 @@ class Compiler(
     }
   }
 
+  private fun visitStatement(stmt: Statement) {
+    when (stmt) {
+      is ExpressionStatement -> {
+        visit(stmt.expr)
+        true
+      }
+
+      is StatementList -> {
+        stmt.statements.forEach { visitStatement(it) }
+        true
+      }
+
+      is Outbox -> {
+        visit(stmt.value)
+        output.add(hrm.Outbox)
+      }
+
+      Return -> output.add(Jump(terminateLabel.n))
+
+      Break -> output.add(Jump(breakLabelStack.lastElement().n))
+
+      Continue -> output.add(Jump(continueLabelStack.lastElement().n))
+
+      is If -> {
+        val trueLabel = newLabel()
+        val falseLabel = newLabel()
+        val after = newLabel()
+
+        visitCondition(stmt.condition, trueLabel, falseLabel)
+        output.add(trueLabel)
+        visitStatement(stmt.trueBody)
+        output.add(Jump(after.n))
+        output.add(falseLabel)
+        stmt.falseBody?.let { visitStatement(it) }
+
+        output.add(after)
+      }
+
+      is While -> {
+        val loopTop = newLabel()
+        val conditionCheck = newLabel()
+        val afterLoop = newLabel()
+
+        val condition = stmt.condition
+
+        if (condition == null) {
+          breakLabelStack.push(afterLoop)
+          continueLabelStack.push(loopTop)
+          output.add(loopTop)
+          visitStatement(stmt.body)
+          output.add(Jump(loopTop.n))
+          output.add(afterLoop)
+          breakLabelStack.pop()
+          continueLabelStack.pop()
+          return
+        }
+
+        breakLabelStack.push(afterLoop)
+        continueLabelStack.push(conditionCheck)
+
+        output.add(conditionCheck)
+        visitCondition(stmt.condition, loopTop, afterLoop)
+        output.add(loopTop)
+        visitStatement(stmt.body)
+        output.add(Jump(conditionCheck.n))
+        output.add(afterLoop)
+
+        breakLabelStack.pop()
+        continueLabelStack.pop()
+        true
+      }
+    }.let {}
+  }
+
   private fun visit(expr: Expression) {
     when (expr) {
       is Inbox -> output.add(hrm.Inbox)
-      is Outbox -> {
-        visit(expr.value)
-        output.add(hrm.Outbox)
-      }
 
       is ReadVar -> output.add(CopyFrom(getVarSlot(expr.variable)))
       is AssignVar -> {
@@ -205,61 +275,6 @@ class Compiler(
         val slot = getConstSlot(value)
         output.add(CopyFrom(slot))
       }
-
-      is While -> {
-        val loopTop = newLabel()
-        val conditionCheck = newLabel()
-        val afterLoop = newLabel()
-
-        val condition = expr.condition
-
-        if (condition == null) {
-          breakLabelStack.push(afterLoop)
-          continueLabelStack.push(loopTop)
-          output.add(loopTop)
-          expr.body.forEach { visit(it) }
-          output.add(Jump(loopTop.n))
-          output.add(afterLoop)
-          breakLabelStack.pop()
-          continueLabelStack.pop()
-          return
-        }
-
-        breakLabelStack.push(afterLoop)
-        continueLabelStack.push(conditionCheck)
-
-        output.add(conditionCheck)
-        visitCondition(expr.condition, loopTop, afterLoop)
-        output.add(loopTop)
-        expr.body.forEach { visit(it) }
-        output.add(Jump(conditionCheck.n))
-        output.add(afterLoop)
-
-        breakLabelStack.pop()
-        continueLabelStack.pop()
-        true
-      }
-
-      is If -> {
-        val trueLabel = newLabel()
-        val falseLabel = newLabel()
-        val after = newLabel()
-
-        visitCondition(expr.condition, trueLabel, falseLabel)
-        output.add(trueLabel)
-        expr.trueBody.forEach { visit(it) }
-        output.add(Jump(after.n))
-        output.add(falseLabel)
-        expr.falseBody.forEach { visit(it) }
-
-        output.add(after)
-      }
-
-      Terminate -> output.add(Jump(terminateLabel.n))
-
-      Break -> output.add(Jump(breakLabelStack.lastElement().n))
-
-      Continue -> output.add(Jump(continueLabelStack.lastElement().n))
 
       is Add -> visitBinary(expr.left, expr.right) { hrm.Add(it) }
 

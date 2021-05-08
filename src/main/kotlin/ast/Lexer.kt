@@ -7,11 +7,12 @@ fun lex(text: String): List<Token> {
   var col = 1
 
   val mapping = linkedMapOf<Regex, (MatchResult, Position) -> Token>(
+    ";".toRegex() to { _, p -> Symbol(SymbolType.SEMICOLON, p) },
     "\\{".toRegex() to { _, p -> Symbol(SymbolType.LEFT_BRACE, p) },
     "}".toRegex() to { _, p -> Symbol(SymbolType.RIGHT_BRACE, p) },
     "\\(".toRegex() to { _, p -> Symbol(SymbolType.LEFT_PAREN, p) },
     "\\)".toRegex() to { _, p -> Symbol(SymbolType.RIGHT_PAREN, p) },
-    "!=".toRegex() to { _ , p-> Symbol(SymbolType.NOT_EQUAL, p) },
+    "!=".toRegex() to { _, p -> Symbol(SymbolType.NOT_EQUAL, p) },
     "==".toRegex() to { _, p -> Symbol(SymbolType.EQUAL_EQUAL, p) },
     "=".toRegex() to { _, p -> Symbol(SymbolType.EQUAL, p) },
     "\\*".toRegex() to { _, p -> Symbol(SymbolType.STAR, p) },

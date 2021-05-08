@@ -25,11 +25,18 @@ copy-pasted into Human Resource Machine.
 The source language is small, constrained by the design of the target machine.
 Its syntax broadly resembles C.
 
+- Statements
+  - The top-level program is a sequence of statements.
+  - Control-flow constructs and `outbox` are statements.
+  - A brace-enclosed list of statements is also considered to be a single
+    statement.
+  - A single expression, followed by a semicolon, is a statement.
+  - Most statements are terminated by semicolons. The exceptions are `if`,
+    `while`, and brace-enclosed statement lists.
 - Expressions
-  - The top-level program is a sequence of expressions.
-  - There are no semicolons to separate expressions.
-  - Things that you'd normally think of as statements, like `while`, are parsed
-    as expressions. Their values are undefined.
+  - Expressions have values that can be used as part of statements and other
+    expressions.
+  - Assignments, arithmetic, and constants are expressions.
 - Variables
   - Variables are not declared; they are created by assigning to them.
   - Variable names may contain alphabetic characters and underscores.
@@ -51,13 +58,10 @@ Its syntax broadly resembles C.
     zero; these can be used without `0` being in the constant pool.
 - Control flow
   - The only looping construct is `while`. Its condition is optional; if the
-    condition is omitted, the loop is infinite. The braces around the body are
-    required.
+    condition is omitted, the loop is infinite.
   - `break` and `continue` can be used inside a loop.
   - `return` terminates the program. (There's no operand.)
-  - `if` looks much like in C. The only difference is that the braces around the
-    `if` and `else` bodies are required. In particular, that means plain
-    `else if` is not possible; it has to be written as `else { if ... }`.
+  - `if` looks much like in C.
   - Conditions
     - A condition can be logical AND (`&&`), logical OR (`||`), or a
       comparision. The logical operators evaluate left-to-right, and are
@@ -65,8 +69,8 @@ Its syntax broadly resembles C.
       `||`.
     - Comparisons must be two expressions separated by one of the comparison
       operators `==`, `!=`, `<`, `>`, `<=`, or `>=`.
-    - Conditions are not valid expressions outside of `if` and `while`. E.g. you
-      can't do `a = (b == c)`.
+    - Conditions are not valid expressions outside of the conditions of `if` and
+      `while` statements. E.g. you can't do `a = (b == c)`.
     - Evaluation order within comparisons is undefined.
 - Arithmetic
   - `+` and `-` operators are supported, and are left-associative.
@@ -76,8 +80,8 @@ Its syntax broadly resembles C.
     section.
   - Evaluation order of arithmetic expressions is undefined.
 - Inbox and outbox
-  - Read from the inbox with `inbox()`.
-  - Write to the outbox with `outbox(value)`. This expression has no value.
+  - Read from the inbox with `inbox()`. This is an expression.
+  - Write to the outbox with `outbox(expr)`. This is a statement.
 
 ## Compilation
 

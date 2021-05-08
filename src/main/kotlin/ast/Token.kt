@@ -6,6 +6,7 @@ enum class SymbolType {
   ELSE,
   INBOX,
   OUTBOX,
+  SEMICOLON,
   LEFT_BRACE,
   RIGHT_BRACE,
   LEFT_PAREN,

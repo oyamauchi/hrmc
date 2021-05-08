@@ -35,15 +35,15 @@ class GameLevelTest(private val testCase: TestCase) {
         "Fibonacci Visitor",
         """
           while {
-            limit = inbox()
-            a = 0
-            ++a
-            outbox(b = a)
+            limit = inbox();
+            a = 0;
+            ++a;
+            outbox(b = a);
             while (b <= limit) {
-              outbox(b)
-              temp = a + b
-              a = b
-              b = temp
+              outbox(b);
+              temp = a + b;
+              a = b;
+              b = temp;
             }
           }
         """.trimIndent(),
@@ -56,13 +56,13 @@ class GameLevelTest(private val testCase: TestCase) {
         "Vowel Incinerator",
         """
           while {
-            curr = inbox()
+            curr = inbox();
             if (curr != 'A' &&
                 curr != 'E' &&
                 curr != 'I' &&
                 curr != 'O' &&
                 curr != 'U') {
-              outbox(curr)
+              outbox(curr);
             }
           }
         """.trimIndent(),
@@ -83,26 +83,26 @@ class GameLevelTest(private val testCase: TestCase) {
         """
     while {
       // The number of elements stored
-      total = 0
+      total = 0;
       while ((curr = inbox()) != 0) {
-        other = (index = total)
-        --other
+        other = (index = total);
+        --other;
         while (other >= 0) {
           if (curr > *other) {
-            *index = *other
+            *index = *other;
           } else {
-            break
+            break;
           }
-          --other
-          --index
+          --other;
+          --index;
         }
-        *index = curr
-        ++total
+        *index = curr;
+        ++total;
       }
 
       while (total != 0) {
-        --total
-        outbox(*total)
+        --total;
+        outbox(*total);
       }
     }
   """.trimIndent(),

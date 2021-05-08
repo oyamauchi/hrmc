@@ -2,6 +2,7 @@ package compiler
 
 import ast.Add
 import ast.AssignVar
+import ast.ExpressionStatement
 import ast.Inbox
 import ast.IntConstant
 import ast.Outbox
@@ -40,7 +41,7 @@ class CompilerTest {
 
   @Test
   fun `nonexistent variable`() {
-    val program = listOf(AssignVar("a", ReadVar("b")))
+    val program = listOf(ExpressionStatement(AssignVar("a", ReadVar("b"))))
     val compiler = Compiler(emptyMap(), 10)
     val exc = assertFailsWith<IllegalStateException> { compiler.compile(program) }
     assertEquals("Variable b not defined before use", exc.message)
@@ -48,7 +49,7 @@ class CompilerTest {
 
   @Test
   fun `self-assignment not allowed`() {
-    val program = listOf(AssignVar("a", ReadVar("a")))
+    val program = listOf(ExpressionStatement(AssignVar("a", ReadVar("a"))))
     val compiler = Compiler(emptyMap(), 10)
     val exc = assertFailsWith<IllegalStateException> { compiler.compile(program) }
     assertEquals("Variable a not defined before use", exc.message)
