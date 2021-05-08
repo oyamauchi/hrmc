@@ -81,6 +81,8 @@ Its syntax broadly resembles C.
 
 ## Compilation
 
+There is no IR; the parse tree is transformed directly into HRM code.
+
 The output HRM code is not highly optimized, and tends to contain some obvious
 inefficiencies. The most glaring problem is redundant loads: the compiler does
 not track which value it currently has in the register, and it emits a load for
