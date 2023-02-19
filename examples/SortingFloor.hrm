@@ -6,19 +6,15 @@ total = 0;
 
 while {
   while ((curr = inbox()) != 0) {
-    // Insertion sort. Keep the elements seen so far in ascending order
-    // starting at index 0. Iterate backwards from highest to lowest;
-    // if the element is greater than "curr", copy it upwards one slot.
-    // If the element is less than or equal to "curr", stop iterating,
+    // Insertion sort. Keep the elements seen so far in descending order
+    // starting at index 0. Iterate backwards from high to low index;
+    // if the element is less than "curr", copy it upwards one slot.
+    // If the element is greater than or equal to "curr", stop iterating,
     // and write "curr" into the next highest slot.
     other = (index = total);
     --other;
-    while (other >= 0) {
-      if (curr > *other) {
-        *index = *other;
-      } else {
-        break;
-      }
+    while (other >= 0 && curr > *other) {
+      *index = *other;
       --other;
       --index;
     }

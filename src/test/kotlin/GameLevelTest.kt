@@ -87,12 +87,8 @@ class GameLevelTest(private val testCase: TestCase) {
       while ((curr = inbox()) != 0) {
         other = (index = total);
         --other;
-        while (other >= 0) {
-          if (curr > *other) {
-            *index = *other;
-          } else {
-            break;
-          }
+        while (other >= 0 && curr > *other) {
+          *index = *other;
           --other;
           --index;
         }
